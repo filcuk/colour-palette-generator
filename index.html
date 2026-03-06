@@ -621,7 +621,11 @@
         input.style.color = autoTextOn(hex);
         updateBadges(hex, badgesWrap);
         state.colors[idx] = toFullHex(hex);
-        if (idx === state.active) pickerPreview(hex);
+        if (idx === state.active) {
+          pickerSetHex(hex);
+        } else {
+          setActive(idx);
+        }
       } else {
         input.classList.add('invalid');
         input.style.background = '#fff';
