@@ -27,7 +27,7 @@
     }
 
     h1 {
-      font-size: 1.1rem;
+      font-size: 1.8rem;
       margin: 0 0 14px;
       font-weight: 600;
     }
@@ -176,6 +176,41 @@
       margin-top: 6px;
     }
 
+    .theme-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font: 12px/1.2 var(--font);
+      color: #555;
+      flex-basis: 100%;
+      margin-top: 6px;
+    }
+    .theme-status-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+    .theme-status-icon.throbber {
+      border: 2px solid rgba(0, 0, 0, .15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: theme-throbber .7s linear infinite;
+    }
+    .theme-status-icon.icon-check {
+      color: var(--ok);
+      font-weight: 700;
+    }
+    .theme-status-icon.icon-warning {
+      color: var(--bad);
+      font-weight: 700;
+    }
+    @keyframes theme-throbber {
+      to { transform: rotate(360deg); }
+    }
+
     .summary {
       margin-top: 10px;
       font: 12px/1.2 var(--font);
@@ -197,7 +232,7 @@
       text-decoration: underline;
     }
 
-    .dropzone {
+    .tip {
       margin-top: 10px;
       border: 2px dashed rgba(0, 0, 0, .2);
       border-radius: 10px;
@@ -395,7 +430,7 @@
   <h1>Colour Palette Generator</h1>
   <div class="subtitle">Generate a colour palette, export to svg, re-import back.</div>
 
-  <div class="dropzone" id="dropzone">💡 Tip: drag &amp; drop an exported SVG here to restore the theme and
+  <div class="tip" id="dropzone">💡 Tip: drag &amp; drop an exported SVG here to restore the theme and
     palette.
   </div>
 
@@ -416,8 +451,12 @@
       <button id="loadThemeBtn" type="button" title="Load the selected saved theme">Load</button>
       <button id="deleteThemeBtn" type="button" title="Delete the selected saved theme">Delete</button>
       <button id="resetBtn" class="btn-secondary" type="button" title="Clear all stored themes and reset palette">Reset</button>
+      <div class="theme-status" id="themeStatus" role="status" aria-live="polite" style="flex-basis:100%;">
+        <span class="theme-status-icon" id="themeStatusIcon" aria-hidden="true"></span>
+        <span class="theme-status-label" id="themeStatusLabel">—</span>
+      </div>
     </div>
-    <p class="storage-warning" style="flex-basis:100%;">Themes are stored only in this browser. Clearing site data, using a different browser or device, or resetting the browser may remove them.</p>
+    <p class="tip" style="flex-basis:100%;">⚠️ Themes are stored only in this browser. Clearing site data, using a different browser or device, or resetting the browser may remove them.</p>
 
     <div class="slider-wrap" title="Pick how many colours to show (1–16)">
       <label for="countSlider">Colours:</label>
@@ -578,6 +617,8 @@
       setCount(state.count); // re-render
       setActive(0);
       if (savedThemesSelect) refreshSavedThemesUI('');
+      themeDirty = false;
+      updateThemeStatus();
     }
 
     // ========= DOM refs =========
@@ -592,6 +633,8 @@
     const themeNameEl = document.getElementById('themeName');
     const resetBtn = document.getElementById('resetBtn');
     const savedThemesSelect = document.getElementById('savedThemes');
+    const themeStatusIcon = document.getElementById('themeStatusIcon');
+    const themeStatusLabel = document.getElementById('themeStatusLabel');
     const saveThemeBtn = document.getElementById('saveThemeBtn');
     const newThemeBtn = document.getElementById('newThemeBtn');
     const loadThemeBtn = document.getElementById('loadThemeBtn');
@@ -612,6 +655,7 @@
     let dragDepth = 0; // global drag counter for fullscreen dropzone
     let savedThemes = [];
     let suppressAutoThemeSave = false; // avoid autosave when programmatically applying themes
+    let themeDirty = false;
 
     // ========= Rendering =========
     function swatchHTML(i, value) {
@@ -643,7 +687,7 @@
       inputs.forEach((inp, idx) => {
         const bWrap = badgesWraps[idx];
         applyPreview(inp, bWrap);
-        inp.addEventListener('input', () => { applyPreview(inp, bWrap); saveState(); });
+        inp.addEventListener('input', () => { themeDirty = true; updateThemeStatus(); applyPreview(inp, bWrap); saveState(); });
         inp.addEventListener('blur', () => { normalizeInput(inp, bWrap); saveState(); });
         inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
         // select active on click/focus
@@ -734,7 +778,7 @@
         if (rW >= 4.5) passW++; else failW++;
       });
       if (passB + failB + passW + failW === 0) summaryEl.textContent = 'Contrast summary: —';
-      else summaryEl.textContent = `Contrast summary — Black: ${passB} PASS, ${failB} FAIL · White: ${passW} PASS, ${failW} FAIL (≥ 4.5:1)`;
+      else summaryEl.textContent = `Contrast ≥ 4.5:1 — Black PASS ${passB} of ${passB + failB} · White PASS ${passW} of ${passW + failW}`;
     }
 
     // ========= Slider (1–16), Theme name =========
@@ -748,11 +792,19 @@
     }
     countSlider.addEventListener('input', (e) => {
       const n = Math.max(1, Math.min(16, parseInt(e.target.value || '8', 10)));
+      themeDirty = true;
+      updateThemeStatus();
       setCount(n);
     });
 
     themeNameEl.addEventListener('input', () => {
       state.name = themeNameEl.value;
+      themeDirty = true;
+      updateThemeStatus();
+      const name = (themeNameEl.value || '').trim();
+      if (savedThemesSelect && (!name || !savedThemes.some(t => t.name === name))) {
+        savedThemesSelect.value = '';
+      }
       saveState();
     });
 
@@ -837,11 +889,13 @@
       const n = Math.max(1, Math.min(16, theme.count || colors.length || 1));
       state.name = theme.name || '';
       themeNameEl.value = state.name;
+      themeDirty = false;
       suppressAutoThemeSave = true;
       setPaletteFromArray(colors);
       setCount(n);
       suppressAutoThemeSave = false;
       saveState();
+      updateThemeStatus();
     }
 
     function parseSvgPalette(text) {
@@ -1063,6 +1117,34 @@
     }
 
     // ========= Saved themes UI =========
+    function updateThemeStatus() {
+      if (!themeStatusIcon || !themeStatusLabel) return;
+      const name = (themeNameEl.value || '').trim();
+      themeStatusIcon.className = 'theme-status-icon';
+      if (!name) {
+        themeStatusIcon.textContent = '\u2014';
+        themeStatusIcon.classList.remove('throbber', 'icon-check', 'icon-warning');
+        themeStatusLabel.textContent = 'No theme selected';
+        return;
+      }
+      const exists = savedThemes.some(t => t.name === name);
+      if (exists && themeDirty) {
+        themeStatusIcon.textContent = '';
+        themeStatusIcon.classList.add('throbber');
+        themeStatusLabel.textContent = 'Unsaved changes';
+      } else if (exists) {
+        themeStatusIcon.textContent = '';
+        themeStatusIcon.classList.add('icon-check');
+        themeStatusIcon.textContent = '\u2713';
+        themeStatusLabel.textContent = 'Saved';
+      } else {
+        themeStatusIcon.textContent = '';
+        themeStatusIcon.classList.add('icon-warning');
+        themeStatusIcon.textContent = '!';
+        themeStatusLabel.textContent = 'Not saved';
+      }
+    }
+
     function refreshSavedThemesUI(selectedName) {
       if (!savedThemesSelect) return;
       while (savedThemesSelect.firstChild) savedThemesSelect.removeChild(savedThemesSelect.firstChild);
@@ -1107,6 +1189,8 @@
       savedThemes[existingIndex] = payload;
       saveSavedThemes(savedThemes);
       refreshSavedThemesUI(name);
+      themeDirty = false;
+      updateThemeStatus();
     }
 
     if (saveThemeBtn && newThemeBtn && loadThemeBtn && deleteThemeBtn && savedThemesSelect) {
@@ -1149,6 +1233,8 @@
         }
         saveSavedThemes(savedThemes);
         refreshSavedThemesUI(name);
+        themeDirty = false;
+        updateThemeStatus();
       });
 
       // Automatically load a theme when it is selected
@@ -1170,6 +1256,7 @@
         savedThemes = savedThemes.filter(t => t.name !== name);
         saveSavedThemes(savedThemes);
         refreshSavedThemesUI('');
+        updateThemeStatus();
       });
     }
 
@@ -1194,6 +1281,7 @@
     // Load saved themes for multi-theme management
     savedThemes = loadSavedThemes();
     refreshSavedThemesUI('');
+    updateThemeStatus();
 
     setCount(state.count);   // render swatches
     setActive(0);            // select first
