@@ -1068,7 +1068,11 @@
 
     function updateSummary() {
       let passB = 0, failB = 0, passW = 0, failW = 0;
-      const allInputs = [...(inputs || []), ...(sentimentInputs || []), ...(divergentInputs || [])];
+      const allInputs = [
+        ...(inputs || []),
+        ...(state.sentimentEnabled && sentimentInputs ? sentimentInputs : []),
+        ...(state.divergentEnabled && divergentInputs ? divergentInputs : [])
+      ];
       allInputs.forEach(inp => {
         if (!inp) return;
         const hex = toFullHex(inp.value || '');
@@ -1078,8 +1082,14 @@
         if (rB >= 4.5) passB++; else failB++;
         if (rW >= 4.5) passW++; else failW++;
       });
-      if (passB + failB + passW + failW === 0) summaryEl.textContent = 'Contrast summary: —';
-      else summaryEl.textContent = `ℹ️ Contrast ≥ 4.5:1 — Black PASS ${passB} of ${passB + failB} · White PASS ${passW} of ${passW + failW}`;
+      const totalB = passB + failB;
+      const totalW = passW + failW;
+      if (totalB === 0 && totalW === 0) summaryEl.textContent = 'Contrast summary: —';
+      else {
+        const pctB = totalB ? Math.round((passB / totalB) * 100) : 0;
+        const pctW = totalW ? Math.round((passW / totalW) * 100) : 0;
+        summaryEl.textContent = `ℹ️ Contrast ≥ 4.5:1 — Black PASS ${pctB}% of ${totalB} · White PASS ${pctW}% of ${totalW}`;
+      }
     }
 
     function updateOptionalSectionsVisibility() {
@@ -1111,6 +1121,7 @@
       sentimentEnabledCb.addEventListener('change', () => {
         state.sentimentEnabled = sentimentEnabledCb.checked;
         updateOptionalSectionsVisibility();
+        updateSummary();
         saveState();
       });
     }
@@ -1118,6 +1129,7 @@
       divergentEnabledCb.addEventListener('change', () => {
         state.divergentEnabled = divergentEnabledCb.checked;
         updateOptionalSectionsVisibility();
+        updateSummary();
         saveState();
       });
     }
