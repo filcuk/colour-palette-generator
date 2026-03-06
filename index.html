@@ -69,7 +69,7 @@
     }
 
     .swatch-wrap.active .swatch-input {
-      outline: 2px solid var(--accent)
+      outline: 4px solid var(--accent)
     }
 
     .swatch-input {
@@ -384,21 +384,33 @@
       pointer-events: none;
     }
 
-    .preview {
-      width: 56px;
-      height: 56px;
-      border-radius: 8px;
-      border: 1px solid rgba(0, 0, 0, .15);
-      box-shadow: var(--shadow);
-    }
-
     .picker-hex {
       font: 600 13px/1.2 var(--font);
       padding: 8px 10px;
       border-radius: 8px;
       border: 1px solid rgba(0, 0, 0, .15);
-      width: 120px;
+      width: 10ch;
+      min-width: 140px;
       text-transform: uppercase;
+    }
+    .picker-input-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .picker-input-row label {
+      font: 600 12px/1.2 var(--font);
+      color: #444;
+      min-width: 2.5em;
+    }
+    .picker-input-row input {
+      width: 3ch;
+      padding: 6px 6px;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, .15);
+      font: 600 12px/1.2 var(--font);
+      text-align: right;
     }
 
     .quick-row {
@@ -482,8 +494,23 @@
         </div>
       </div>
       <div style="display:flex; flex-direction:column; gap:8px;">
-        <div class="preview" id="preview"></div>
-        <input id="pickerHex" class="picker-hex" placeholder="#RRGGBB" />
+        <div class="picker-input-row">
+          <label>HEX</label>
+          <input id="pickerHex" class="picker-hex" placeholder="#RRGGBB" />
+        </div>
+        <div class="picker-input-row">
+          <label>RGB</label>
+          <input id="pickerR" type="text" inputmode="numeric" placeholder="R" maxlength="3" title="Red 0–255" />
+          <input id="pickerG" type="text" inputmode="numeric" placeholder="G" maxlength="3" title="Green 0–255" />
+          <input id="pickerB" type="text" inputmode="numeric" placeholder="B" maxlength="3" title="Blue 0–255" />
+        </div>
+        <div class="picker-input-row">
+          <label>CMYK</label>
+          <input id="pickerC" type="text" inputmode="numeric" placeholder="C" maxlength="3" title="Cyan 0–100" />
+          <input id="pickerM" type="text" inputmode="numeric" placeholder="M" maxlength="3" title="Magenta 0–100" />
+          <input id="pickerY" type="text" inputmode="numeric" placeholder="Y" maxlength="3" title="Yellow 0–100" />
+          <input id="pickerK" type="text" inputmode="numeric" placeholder="K" maxlength="3" title="Key 0–100" />
+        </div>
         <div class="quick-row" id="quickRow" title="Quick colours"></div>
       </div>
     </div>
@@ -508,6 +535,34 @@
 
     function hexToRgb(hex) { const h = hex.slice(1); return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16) }; }
     function rgbToHex(r, g, b) { const to2 = v => v.toString(16).padStart(2, '0').toUpperCase(); return '#' + to2(r) + to2(g) + to2(b); }
+    function rgbToCmyk(r, g, b) {
+      r = Math.max(0, Math.min(255, Math.round(r)));
+      g = Math.max(0, Math.min(255, Math.round(g)));
+      b = Math.max(0, Math.min(255, Math.round(b)));
+      const rn = r / 255, gn = g / 255, bn = b / 255;
+      const k = 1 - Math.max(rn, gn, bn);
+      if (k >= 1 || (1 - k) < 1e-6) return { c: 0, m: 0, y: 0, k: 100 };
+      const c = (1 - rn - k) / (1 - k);
+      const m = (1 - gn - k) / (1 - k);
+      const y = (1 - bn - k) / (1 - k);
+      return {
+        c: Math.max(0, Math.min(100, Math.round(c * 100))),
+        m: Math.max(0, Math.min(100, Math.round(m * 100))),
+        y: Math.max(0, Math.min(100, Math.round(y * 100))),
+        k: Math.max(0, Math.min(100, Math.round(k * 100)))
+      };
+    }
+    function cmykToRgb(c, m, y, k) {
+      c = Math.max(0, Math.min(100, Number(c)));
+      m = Math.max(0, Math.min(100, Number(m)));
+      y = Math.max(0, Math.min(100, Number(y)));
+      k = Math.max(0, Math.min(100, Number(k)));
+      const cc = c / 100, mm = m / 100, yy = y / 100, kk = k / 100;
+      const r = Math.round(255 * (1 - cc) * (1 - kk));
+      const g = Math.round(255 * (1 - mm) * (1 - kk));
+      const b = Math.round(255 * (1 - yy) * (1 - kk));
+      return { r: Math.max(0, Math.min(255, r)), g: Math.max(0, Math.min(255, g)), b: Math.max(0, Math.min(255, b)) };
+    }
     function srgbToLinear(c) { const s = c / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); }
     function relLuminance(hex) { const { r, g, b } = hexToRgb(hex); const R = srgbToLinear(r), G = srgbToLinear(g), B = srgbToLinear(b); return 0.2126 * R + 0.7152 * G + 0.0722 * B; }
     function contrastRatio(fgHex, bgHex) { const L1 = relLuminance(fgHex), L2 = relLuminance(bgHex); const lighter = Math.max(L1, L2), darker = Math.min(L1, L2); return (lighter + 0.05) / (darker + 0.05); }
@@ -646,8 +701,14 @@
     const svHandle = document.getElementById('svHandle');
     const hueEl = document.getElementById('hue');
     const hueHandle = document.getElementById('hueHandle');
-    const previewEl = document.getElementById('preview');
     const pickerHexEl = document.getElementById('pickerHex');
+    const pickerR = document.getElementById('pickerR');
+    const pickerG = document.getElementById('pickerG');
+    const pickerB = document.getElementById('pickerB');
+    const pickerC = document.getElementById('pickerC');
+    const pickerM = document.getElementById('pickerM');
+    const pickerY = document.getElementById('pickerY');
+    const pickerK = document.getElementById('pickerK');
     const quickRow = document.getElementById('quickRow');
 
     let wraps = [], inputs = [], badgesWraps = [];
@@ -1013,8 +1074,18 @@
 
     // ========= Simple Color Picker Logic =========
     function pickerPreview(hex) {
-      previewEl.style.background = hex;
-      pickerHexEl.value = toFullHex(hex) || '';
+      const full = toFullHex(hex);
+      if (!full) return;
+      pickerHexEl.value = full;
+      const rgb = hexToRgb(full);
+      if (pickerR) pickerR.value = String(rgb.r);
+      if (pickerG) pickerG.value = String(rgb.g);
+      if (pickerB) pickerB.value = String(rgb.b);
+      const cmyk = rgbToCmyk(rgb.r, rgb.g, rgb.b);
+      if (pickerC) pickerC.value = String(cmyk.c);
+      if (pickerM) pickerM.value = String(cmyk.m);
+      if (pickerY) pickerY.value = String(cmyk.y);
+      if (pickerK) pickerK.value = String(cmyk.k);
     }
     function pickerSetHue(h) {
       ph = (h + 360) % 360;
@@ -1093,6 +1164,33 @@
       const full = toPreviewableHex(pickerHexEl.value || '');
       if (full) { pickerSetHex(full); applyColorToActive(full); }
     });
+
+    function tryApplyRgb() {
+      if (!pickerR || !pickerG || !pickerB) return;
+      const r = parseInt(pickerR.value, 10), g = parseInt(pickerG.value, 10), b = parseInt(pickerB.value, 10);
+      if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return;
+      if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) return;
+      const hex = rgbToHex(r, g, b);
+      pickerSetHex(hex);
+      applyColorToActive(hex);
+    }
+    function tryApplyCmyk() {
+      if (!pickerC || !pickerM || !pickerY || !pickerK) return;
+      const c = parseInt(pickerC.value.trim(), 10), m = parseInt(pickerM.value.trim(), 10), y = parseInt(pickerY.value.trim(), 10), k = parseInt(pickerK.value.trim(), 10);
+      if (Number.isNaN(c) || Number.isNaN(m) || Number.isNaN(y) || Number.isNaN(k)) return;
+      if (c < 0 || c > 100 || m < 0 || m > 100 || y < 0 || y > 100 || k < 0 || k > 100) return;
+      const { r, g, b } = cmykToRgb(c, m, y, k);
+      const hex = rgbToHex(r, g, b);
+      pickerSetHex(hex);
+      applyColorToActive(hex);
+    }
+    [pickerR, pickerG, pickerB].forEach(el => { if (el) el.addEventListener('input', tryApplyRgb); });
+    [pickerC, pickerM, pickerY, pickerK].forEach(el => {
+      if (!el) return;
+      el.addEventListener('blur', tryApplyCmyk);
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
+    });
+
     const QUICK = ['#FF0000', '#FFA500', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#000000', '#FFFFFF', '#808080', '#8B4513', '#800080'];
     quickRow.innerHTML = QUICK.map(c => `<div class="chip" data-hex="${c}" style="background:${c}"></div>`).join('');
     quickRow.addEventListener('click', (e) => {
