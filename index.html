@@ -68,7 +68,34 @@
       align-items: flex-start;
       flex-wrap: wrap;
       overflow-x: visible;
-      margin-top: 12px
+      margin-top: 12px;
+    }
+    .row-fixed {
+      margin-top: 6px;
+    }
+    .colour-block {
+      margin-top: 18px;
+    }
+    .colour-block:first-of-type {
+      margin-top: 0;
+    }
+    .colour-block-heading {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      margin: 0 0 6px 0;
+    }
+    .colour-block-heading input[type="checkbox"] {
+      margin: 0;
+    }
+    .colour-block-title {
+      margin: 0;
+      font: 600 13px/1.3 var(--font);
+      color: #555;
+    }
+    .optional-content.optional-hidden {
+      display: none;
     }
 
     .swatch-wrap {
@@ -536,13 +563,35 @@
 
   <section class="page-section" aria-labelledby="section-colours">
     <h2 id="section-colours">Colours</h2>
-    <div class="slider-wrap" title="Pick how many colours to show (1-16)">
-      <input id="countSlider" type="range" min="1" max="16" value="8" />
-      <output id="countValue">8</output>
+    <div class="colour-block">
+      <h3 class="colour-block-title">Theme colours</h3>
+      <div class="slider-wrap" title="Pick how many theme colours (1–16)">
+        <label for="countSlider">Count:</label>
+        <input id="countSlider" type="range" min="1" max="16" value="8" />
+        <output id="countValue">8</output>
+      </div>
+      <div class="row" id="row" role="group" aria-label="Theme color swatches"></div>
     </div>
-    <div class="row" id="row" role="group" aria-label="Color swatches"></div>
+    <div class="colour-block" id="blockSentiment">
+      <label class="colour-block-heading">
+        <input type="checkbox" id="sentimentEnabled" />
+        <span class="colour-block-title">Sentiment colours</span>
+      </label>
+      <div class="optional-content" id="rowSentimentWrap">
+        <div class="row row-fixed" id="rowSentiment" role="group" aria-label="Sentiment color swatches"></div>
+      </div>
+    </div>
+    <div class="colour-block" id="blockDivergent">
+      <label class="colour-block-heading">
+        <input type="checkbox" id="divergentEnabled" />
+        <span class="colour-block-title">Divergent colours</span>
+      </label>
+      <div class="optional-content" id="rowDivergentWrap">
+        <div class="row row-fixed" id="rowDivergent" role="group" aria-label="Divergent color swatches"></div>
+      </div>
+    </div>
     <p class="tip" id="summary" style="margin-top:10px; margin-bottom:0;">ℹ️ Contrast summary: —</p>
-    <div class="picker-panel" id="pickerPanel" hidden>
+    <div class="picker-panel" id="pickerPanel">
       <div class="picker">
         <div>
           <div id="sv" class="sv" aria-label="Saturation/Value area">
@@ -678,29 +727,63 @@
       '#FF6B6B', '#F7C948', '#4ECDC4', '#556CD6', '#2E3A59', '#1B998B', '#E76F51', '#264653',
       '#8E44AD', '#27AE60', '#D35400', '#3498DB', '#E84393', '#16A085', '#C0392B', '#7F8C8D'
     ];
-    const STORAGE_KEY = 'colour-palette.v1';
+    const DEFAULTS_SENTIMENT = ['#E53935', '#757575', '#43A047']; // negative, neutral, positive
+    const DEFAULTS_DIVERGENT = ['#2166AC', '#F7F7F7', '#B2182B'];  // low, mid, high
+    const STORAGE_KEY = 'colour-palette.v2';
     const THEMES_KEY = 'colour-palette.themes.v1';
 
-    const state = { count: 8, name: '', colors: DEFAULTS.slice(0, 16), active: 0 };
+    const state = {
+      count: 8,
+      name: '',
+      colors: DEFAULTS.slice(0, 16),
+      sentimentColors: DEFAULTS_SENTIMENT.slice(),
+      divergentColors: DEFAULTS_DIVERGENT.slice(),
+      sentimentEnabled: true,
+      divergentEnabled: true,
+      activeSection: 'theme',
+      activeIndex: 0
+    };
 
     function saveState() {
       try {
-        const colors = Array.from({ length: state.count }, (_, i) => toFullHex(state.colors[i]) || DEFAULTS[i]);
-        const payload = { count: state.count, name: state.name || '', colors };
+        const themeColors = Array.from({ length: state.count }, (_, i) => toFullHex(state.colors[i]) || DEFAULTS[i]);
+        const sentiment = (state.sentimentColors || []).map(toFullHex).filter(Boolean).slice(0, 3);
+        const divergent = (state.divergentColors || []).map(toFullHex).filter(Boolean).slice(0, 3);
+        const payload = {
+          count: state.count,
+          name: state.name || '',
+          colors: themeColors,
+          sentimentColors: sentiment.length === 3 ? sentiment : DEFAULTS_SENTIMENT.slice(),
+          divergentColors: divergent.length === 3 ? divergent : DEFAULTS_DIVERGENT.slice(),
+          sentimentEnabled: !!state.sentimentEnabled,
+          divergentEnabled: !!state.divergentEnabled
+        };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       } catch { }
       if (!suppressAutoThemeSave) autoSaveThemeIfNamed();
     }
     function loadState() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('colour-palette.v1');
         if (!raw) return null;
         const data = JSON.parse(raw);
         if (!data || !Array.isArray(data.colors) || !data.colors.length) return null;
+        const count = Math.max(1, Math.min(16, parseInt(data.count || 8, 10)));
+        const colors = data.colors.map(toFullHex).filter(Boolean).slice(0, 16);
+        const sentimentColors = Array.isArray(data.sentimentColors) && data.sentimentColors.length === 3
+          ? data.sentimentColors.map(toFullHex).filter(Boolean).slice(0, 3)
+          : DEFAULTS_SENTIMENT.slice();
+        const divergentColors = Array.isArray(data.divergentColors) && data.divergentColors.length === 3
+          ? data.divergentColors.map(toFullHex).filter(Boolean).slice(0, 3)
+          : DEFAULTS_DIVERGENT.slice();
         return {
-          count: Math.max(1, Math.min(16, parseInt(data.count || 8, 10))),
+          count,
           name: (data.name || '').toString(),
-          colors: data.colors.map(toFullHex).filter(Boolean).slice(0, 16)
+          colors,
+          sentimentColors,
+          divergentColors,
+          sentimentEnabled: data.sentimentEnabled !== false,
+          divergentEnabled: data.divergentEnabled !== false
         };
       } catch { return null; }
     }
@@ -729,12 +812,24 @@
     }
     function resetState() {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('colour-palette.v1');
       localStorage.removeItem(THEMES_KEY);
       savedThemes = [];
-      state.count = 8; state.name = ''; state.colors = DEFAULTS.slice(0, 16); state.active = 0;
+      state.count = 8;
+      state.name = '';
+      state.colors = DEFAULTS.slice(0, 16);
+      state.sentimentColors = DEFAULTS_SENTIMENT.slice();
+      state.divergentColors = DEFAULTS_DIVERGENT.slice();
+      state.sentimentEnabled = true;
+      state.divergentEnabled = true;
+      state.activeSection = 'theme';
+      state.activeIndex = 0;
       themeNameEl.value = '';
-      setCount(state.count); // re-render
-      setActive(0);
+      setCount(state.count);
+      renderSentimentSwatches();
+      renderDivergentSwatches();
+      updateOptionalSectionsVisibility();
+      setActive('theme', 0);
       if (themeComboList) refreshSavedThemesUI('');
       themeDirty = false;
       updateThemeStatus();
@@ -742,6 +837,12 @@
 
     // ========= DOM refs =========
     const rowEl = document.getElementById('row');
+    const rowSentimentEl = document.getElementById('rowSentiment');
+    const rowDivergentEl = document.getElementById('rowDivergent');
+    const rowSentimentWrapEl = document.getElementById('rowSentimentWrap');
+    const rowDivergentWrapEl = document.getElementById('rowDivergentWrap');
+    const sentimentEnabledCb = document.getElementById('sentimentEnabled');
+    const divergentEnabledCb = document.getElementById('divergentEnabled');
     const countSlider = document.getElementById('countSlider');
     const countValue = document.getElementById('countValue');
     const downloadBtn = document.getElementById('downloadBtn');
@@ -760,7 +861,6 @@
     const deleteThemeBtn = document.getElementById('deleteThemeBtn');
 
     const pickerPanel = document.getElementById('pickerPanel');
-    const togglePickerBtn = document.getElementById('togglePicker');
     const svEl = document.getElementById('sv');
     const svHandle = document.getElementById('svHandle');
     const hueEl = document.getElementById('hue');
@@ -776,6 +876,8 @@
     const quickRow = document.getElementById('quickRow');
 
     let wraps = [], inputs = [], badgesWraps = [];
+    let sentimentWraps = [], sentimentInputs = [], sentimentBadgesWraps = [];
+    let divergentWraps = [], divergentInputs = [], divergentBadgesWraps = [];
     let ph = 0, ps = 1, pv = 1; // picker HSV
     let dragDepth = 0; // global drag counter for fullscreen dropzone
     let savedThemes = [];
@@ -783,12 +885,14 @@
     let themeDirty = false;
 
     // ========= Rendering =========
-    function swatchHTML(i, value) {
+    function swatchHTML(section, i, value, ariaLabel) {
       const vAttr = value ? ` value="${value}"` : '';
-      const activeCls = (i === state.active) ? ' active' : '';
+      const isActive = state.activeSection === section && state.activeIndex === i;
+      const activeCls = isActive ? ' active' : '';
+      const label = ariaLabel || `${section} color ${i + 1}`;
       return `
-        <div class="swatch-wrap${activeCls}" data-index="${i}">
-          <input class="swatch-input" aria-label="Color ${i + 1}" placeholder="#RRGGBB"${vAttr} data-index="${i}" />
+        <div class="swatch-wrap${activeCls}" data-section="${section}" data-index="${i}">
+          <input class="swatch-input" aria-label="${label}" placeholder="#RRGGBB"${vAttr} data-section="${section}" data-index="${i}" />
           <div class="badges" aria-live="polite">
             <span class="badge badge-black">Black — —</span>
             <span class="badge badge-white">White — —</span>
@@ -797,37 +901,105 @@
       `;
     }
 
-    function renderSwatches(n) {
-      let html = '';
-      for (let i = 0; i < n; i++) {
-        const val = toFullHex(state.colors[i]) || '';
-        html += swatchHTML(i, val);
-      }
-      rowEl.innerHTML = html;
-
-      wraps = Array.from(document.querySelectorAll('.swatch-wrap'));
-      inputs = wraps.map(w => w.querySelector('.swatch-input'));
-      badgesWraps = wraps.map(w => w.querySelector('.badges'));
-
-      inputs.forEach((inp, idx) => {
-        const bWrap = badgesWraps[idx];
+    function bindSwatchInputs(wrapsArr, inputsArr, badgesArr, section, stateColors) {
+      inputsArr.forEach((inp, idx) => {
+        const bWrap = badgesArr[idx];
         applyPreview(inp, bWrap);
         inp.addEventListener('input', () => { themeDirty = true; updateThemeStatus(); applyPreview(inp, bWrap); saveState(); });
         inp.addEventListener('blur', () => { normalizeInput(inp, bWrap); saveState(); });
         inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
-        // select active on click/focus
-        inp.addEventListener('focus', () => setActive(idx));
-        inp.addEventListener('click', () => setActive(idx));
+        inp.addEventListener('focus', () => setActive(section, idx));
+        inp.addEventListener('click', () => setActive(section, idx));
       });
+    }
 
+    function renderSwatches(n) {
+      let html = '';
+      for (let i = 0; i < n; i++) {
+        const val = toFullHex(state.colors[i]) || '';
+        html += swatchHTML('theme', i, val, `Theme color ${i + 1}`);
+      }
+      rowEl.innerHTML = html;
+      wraps = Array.from(rowEl.querySelectorAll('.swatch-wrap'));
+      inputs = wraps.map(w => w.querySelector('.swatch-input'));
+      badgesWraps = wraps.map(w => w.querySelector('.badges'));
+      bindSwatchInputs(wraps, inputs, badgesWraps, 'theme', state.colors);
+      updateActiveClass();
       updateSummary();
     }
 
-    function setActive(i) {
-      i = Math.max(0, Math.min(state.count - 1, i));
-      state.active = i;
-      wraps.forEach((w, idx) => w.classList.toggle('active', idx === i));
-      const hex = toFullHex(inputs[i].value || state.colors[i]);
+    function renderSentimentSwatches() {
+      if (!rowSentimentEl) return;
+      let html = '';
+      const labels = ['Negative', 'Neutral', 'Positive'];
+      for (let i = 0; i < 3; i++) {
+        const val = toFullHex(state.sentimentColors[i]) || '';
+        html += swatchHTML('sentiment', i, val, labels[i]);
+      }
+      rowSentimentEl.innerHTML = html;
+      sentimentWraps = Array.from(rowSentimentEl.querySelectorAll('.swatch-wrap'));
+      sentimentInputs = sentimentWraps.map(w => w.querySelector('.swatch-input'));
+      sentimentBadgesWraps = sentimentWraps.map(w => w.querySelector('.badges'));
+      bindSwatchInputs(sentimentWraps, sentimentInputs, sentimentBadgesWraps, 'sentiment', state.sentimentColors);
+      updateActiveClass();
+      updateSummary();
+    }
+
+    function renderDivergentSwatches() {
+      if (!rowDivergentEl) return;
+      let html = '';
+      const labels = ['Low', 'Mid', 'High'];
+      for (let i = 0; i < 3; i++) {
+        const val = toFullHex(state.divergentColors[i]) || '';
+        html += swatchHTML('divergent', i, val, labels[i]);
+      }
+      rowDivergentEl.innerHTML = html;
+      divergentWraps = Array.from(rowDivergentEl.querySelectorAll('.swatch-wrap'));
+      divergentInputs = divergentWraps.map(w => w.querySelector('.swatch-input'));
+      divergentBadgesWraps = divergentWraps.map(w => w.querySelector('.badges'));
+      bindSwatchInputs(divergentWraps, divergentInputs, divergentBadgesWraps, 'divergent', state.divergentColors);
+      updateActiveClass();
+      updateSummary();
+    }
+
+    function getActiveInput() {
+      if (state.activeSection === 'theme') return inputs[state.activeIndex];
+      if (state.activeSection === 'sentiment') return sentimentInputs ? sentimentInputs[state.activeIndex] : null;
+      if (state.activeSection === 'divergent') return divergentInputs ? divergentInputs[state.activeIndex] : null;
+      return null;
+    }
+    function getActiveBadgesWrap() {
+      if (state.activeSection === 'theme') return badgesWraps[state.activeIndex];
+      if (state.activeSection === 'sentiment') return sentimentBadgesWraps ? sentimentBadgesWraps[state.activeIndex] : null;
+      if (state.activeSection === 'divergent') return divergentBadgesWraps ? divergentBadgesWraps[state.activeIndex] : null;
+      return null;
+    }
+    function getActiveStateArray() {
+      if (state.activeSection === 'theme') return state.colors;
+      if (state.activeSection === 'sentiment') return state.sentimentColors;
+      if (state.activeSection === 'divergent') return state.divergentColors;
+      return state.colors;
+    }
+
+    function updateActiveClass() {
+      const allWraps = [...(wraps || []), ...(sentimentWraps || []), ...(divergentWraps || [])];
+      allWraps.forEach(w => {
+        if (!w) return;
+        const section = w.dataset.section;
+        const index = parseInt(w.dataset.index, 10);
+        w.classList.toggle('active', state.activeSection === section && state.activeIndex === index);
+      });
+    }
+
+    function setActive(section, index) {
+      const maxIdx = section === 'theme' ? state.count - 1 : 2;
+      const i = Math.max(0, Math.min(maxIdx, index));
+      state.activeSection = section;
+      state.activeIndex = i;
+      updateActiveClass();
+      const inp = getActiveInput();
+      const arr = getActiveStateArray();
+      const hex = inp ? toFullHex(inp.value || arr[i]) : null;
       if (hex) pickerSetHex(hex);
     }
 
@@ -859,7 +1031,9 @@
     }
 
     function applyPreview(input, badgesWrap) {
-      const idx = +input.dataset.index;
+      const section = input.dataset.section || 'theme';
+      const idx = parseInt(input.dataset.index, 10) || 0;
+      const arr = section === 'theme' ? state.colors : section === 'sentiment' ? state.sentimentColors : state.divergentColors;
       const hex = toPreviewableHex(input.value || '');
 
       if (hex) {
@@ -867,11 +1041,11 @@
         input.style.background = hex;
         input.style.color = autoTextOn(hex);
         updateBadges(hex, badgesWrap);
-        state.colors[idx] = toFullHex(hex);
-        if (idx === state.active) {
+        arr[idx] = toFullHex(hex);
+        if (state.activeSection === section && state.activeIndex === idx) {
           pickerSetHex(hex);
         } else {
-          setActive(idx);
+          setActive(section, idx);
         }
       } else {
         input.classList.add('invalid');
@@ -894,7 +1068,9 @@
 
     function updateSummary() {
       let passB = 0, failB = 0, passW = 0, failW = 0;
-      inputs.forEach(inp => {
+      const allInputs = [...(inputs || []), ...(sentimentInputs || []), ...(divergentInputs || [])];
+      allInputs.forEach(inp => {
+        if (!inp) return;
         const hex = toFullHex(inp.value || '');
         if (!hex) return;
         const rB = contrastRatio('#000000', hex);
@@ -906,13 +1082,22 @@
       else summaryEl.textContent = `ℹ️ Contrast ≥ 4.5:1 — Black PASS ${passB} of ${passB + failB} · White PASS ${passW} of ${passW + failW}`;
     }
 
+    function updateOptionalSectionsVisibility() {
+      if (sentimentEnabledCb) sentimentEnabledCb.checked = !!state.sentimentEnabled;
+      if (divergentEnabledCb) divergentEnabledCb.checked = !!state.divergentEnabled;
+      if (rowSentimentWrapEl) rowSentimentWrapEl.classList.toggle('optional-hidden', !state.sentimentEnabled);
+      if (rowDivergentWrapEl) rowDivergentWrapEl.classList.toggle('optional-hidden', !state.divergentEnabled);
+      if (state.activeSection === 'sentiment' && !state.sentimentEnabled) setActive('theme', 0);
+      if (state.activeSection === 'divergent' && !state.divergentEnabled) setActive('theme', 0);
+    }
+
     // ========= Slider (1–16), Theme name =========
     function setCount(n) {
       state.count = n;
       countSlider.value = String(n);
       countValue.textContent = String(n);
       renderSwatches(n);
-      setActive(Math.min(state.active, n - 1));
+      if (state.activeSection === 'theme') setActive('theme', Math.min(state.activeIndex, n - 1));
       saveState();
     }
     countSlider.addEventListener('input', (e) => {
@@ -921,6 +1106,21 @@
       updateThemeStatus();
       setCount(n);
     });
+
+    if (sentimentEnabledCb) {
+      sentimentEnabledCb.addEventListener('change', () => {
+        state.sentimentEnabled = sentimentEnabledCb.checked;
+        updateOptionalSectionsVisibility();
+        saveState();
+      });
+    }
+    if (divergentEnabledCb) {
+      divergentEnabledCb.addEventListener('change', () => {
+        state.divergentEnabled = divergentEnabledCb.checked;
+        updateOptionalSectionsVisibility();
+        saveState();
+      });
+    }
 
     themeNameEl.addEventListener('input', () => {
       state.name = themeNameEl.value;
@@ -939,51 +1139,75 @@
 
     // ========= Export SVG (only colours shown; includes theme name) =========
     downloadBtn.addEventListener('click', () => {
-      const colors = inputs.map(i => toFullHex(i.value || ''));
-      const firstInvalid = colors.findIndex(c => !c);
+      const themeColors = inputs.map(i => toFullHex(i.value || ''));
+      const firstInvalid = themeColors.findIndex(c => !c);
       if (firstInvalid !== -1) {
         inputs[firstInvalid].classList.add('invalid');
         inputs[firstInvalid].focus();
-        alert('Please fix invalid hex values (use #RRGGBB or #RGB).');
+        alert('Please fix invalid hex values in theme colours (use #RRGGBB or #RGB).');
         return;
       }
+      const sentiment = (state.sentimentColors || []).slice(0, 3).map(c => toFullHex(c)).filter(Boolean);
+      const divergent = (state.divergentColors || []).slice(0, 3).map(c => toFullHex(c)).filter(Boolean);
 
       const themeName = (state.name || '').trim();
       const safeTitle = themeName || 'Color Palette';
       const fileBase = sanitizeNameForFile(themeName) || 'palette';
 
-      const count = colors.length;
-      const sw = 120, sh = 110, gap = 16, pad = 20;
+      const count = themeColors.length;
+      const sw = 120, sh = 110, gap = 16, rowGap = 14, pad = 20;
+      const hasSentiment = state.sentimentEnabled && sentiment.length === 3;
+      const hasDivergent = state.divergentEnabled && divergent.length === 3;
+      const numRows = 1 + (hasSentiment ? 1 : 0) + (hasDivergent ? 1 : 0);
       const width = pad * 2 + count * sw + (count - 1) * gap;
-      const height = pad * 2 + sh;
+      const height = pad * 2 + numRows * sh + (numRows - 1) * rowGap;
 
-      let nodes = '';
-      colors.forEach((hex, i) => {
-        const x = pad + i * (sw + gap);
-        const y = pad;
-        const txtColor = autoTextOn(hex);
-        const rBlack = contrastRatio('#000000', hex).toFixed(2);
-        const rWhite = contrastRatio('#FFFFFF', hex).toFixed(2);
-        const passB = parseFloat(rBlack) >= 4.5;
-        const passW = parseFloat(rWhite) >= 4.5;
-
-        nodes += `
-          <g data-index="${i}">
-            <rect x="${x}" y="${y}" width="${sw}" height="${sh}" rx="10"
+      function swatchNodes(colors, startY, rolePrefix) {
+        let out = '';
+        colors.forEach((hex, i) => {
+          const x = pad + i * (sw + gap);
+          const txtColor = autoTextOn(hex);
+          const rBlack = contrastRatio('#000000', hex).toFixed(2);
+          const rWhite = contrastRatio('#FFFFFF', hex).toFixed(2);
+          const passB = parseFloat(rBlack) >= 4.5;
+          const passW = parseFloat(rWhite) >= 4.5;
+          out += `
+          <g data-index="${i}" data-role="${rolePrefix}">
+            <rect x="${x}" y="${startY}" width="${sw}" height="${sh}" rx="10"
               fill="${hex}" stroke="rgba(0,0,0,0.15)"
               data-role="swatch" data-hex="${hex}"/>
-            <text x="${x + sw / 2}" y="${y + sh / 2 + 5}" text-anchor="middle"
+            <text x="${x + sw / 2}" y="${startY + sh / 2 + 5}" text-anchor="middle"
               font-family="monospace" font-size="16" fill="${txtColor}"
               data-role="label">${hex}</text>
             <title>Swatch ${i + 1}: ${hex} — Contrast vs Black ${rBlack}:1 (${passB ? 'PASS' : 'FAIL'}), vs White ${rWhite}:1 (${passW ? 'PASS' : 'FAIL'})</title>
           </g>`;
-      });
+        });
+        return out;
+      }
 
-      const meta = { app: 'm365-copilot-palette', version: 5, name: themeName, count, colors };
+      let nodes = swatchNodes(themeColors, pad, 'theme');
+      let rowIndex = 1;
+      if (hasSentiment) {
+        nodes += swatchNodes(sentiment, pad + rowIndex * (sh + rowGap), 'sentiment');
+        rowIndex++;
+      }
+      if (hasDivergent) {
+        nodes += swatchNodes(divergent, pad + rowIndex * (sh + rowGap), 'divergent');
+      }
+
+      const meta = {
+        app: 'm365-copilot-palette',
+        version: 6,
+        name: themeName,
+        count,
+        colors: themeColors,
+        ...(state.sentimentEnabled && sentiment.length === 3 ? { sentimentColors: sentiment } : {}),
+        ...(state.divergentEnabled && divergent.length === 3 ? { divergentColors: divergent } : {})
+      };
       const svg =
         `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${safeTitle}">
   <title>${safeTitle}</title>
-  <desc>Theme: ${safeTitle}. Palette exported with ${count} swatch(es). Metadata included for re-import.</desc>
+  <desc>Theme: ${safeTitle}. Palette exported with ${count} theme swatch(es)${hasSentiment ? ', sentiment row' : ''}${hasDivergent ? ', divergent row' : ''}. Metadata included for re-import.</desc>
   <metadata id="palette-meta">${JSON.stringify(meta)}</metadata>
   <rect width="100%" height="100%" fill="#ffffff"/>
   ${nodes}
@@ -1014,6 +1238,16 @@
       suppressAutoThemeSave = true;
       setPaletteFromArray(colors);
       setCount(n);
+      if (Array.isArray(theme.sentimentColors) && theme.sentimentColors.length === 3) {
+        state.sentimentColors = theme.sentimentColors.map(toFullHex).filter(Boolean).slice(0, 3);
+        if (state.sentimentColors.length < 3) state.sentimentColors = DEFAULTS_SENTIMENT.slice();
+      }
+      if (Array.isArray(theme.divergentColors) && theme.divergentColors.length === 3) {
+        state.divergentColors = theme.divergentColors.map(toFullHex).filter(Boolean).slice(0, 3);
+        if (state.divergentColors.length < 3) state.divergentColors = DEFAULTS_DIVERGENT.slice();
+      }
+      renderSentimentSwatches();
+      renderDivergentSwatches();
       suppressAutoThemeSave = false;
       saveState();
       updateThemeStatus();
@@ -1030,7 +1264,12 @@
           try {
             const meta = JSON.parse(metaEl.textContent.trim());
             if (meta && Array.isArray(meta.colors)) {
-              return { colors: meta.colors.map(toFullHex).filter(Boolean), name: (meta.name || '').trim() };
+              const out = { colors: meta.colors.map(toFullHex).filter(Boolean), name: (meta.name || '').trim() };
+              if (Array.isArray(meta.sentimentColors) && meta.sentimentColors.length === 3)
+                out.sentimentColors = meta.sentimentColors.map(toFullHex).filter(Boolean).slice(0, 3);
+              if (Array.isArray(meta.divergentColors) && meta.divergentColors.length === 3)
+                out.divergentColors = meta.divergentColors.map(toFullHex).filter(Boolean).slice(0, 3);
+              return out;
             }
           } catch { }
         }
@@ -1077,7 +1316,7 @@
           const colors = parsed.colors;
           const n = Math.max(1, Math.min(16, colors.length));
           setPaletteFromArray(colors);
-          setCount(n); // updates slider and re-renders
+          setCount(n);
           if (typeof parsed.name === 'string' && parsed.name.trim().length) {
             state.name = parsed.name.trim();
             themeNameEl.value = state.name;
@@ -1085,6 +1324,16 @@
             themeNameEl.value = '';
             state.name = '';
           }
+          if (Array.isArray(parsed.sentimentColors) && parsed.sentimentColors.length === 3) {
+            state.sentimentColors = parsed.sentimentColors.map(toFullHex).filter(Boolean).slice(0, 3);
+            if (state.sentimentColors.length < 3) state.sentimentColors = DEFAULTS_SENTIMENT.slice();
+          }
+          if (Array.isArray(parsed.divergentColors) && parsed.divergentColors.length === 3) {
+            state.divergentColors = parsed.divergentColors.map(toFullHex).filter(Boolean).slice(0, 3);
+            if (state.divergentColors.length < 3) state.divergentColors = DEFAULTS_DIVERGENT.slice();
+          }
+          renderSentimentSwatches();
+          renderDivergentSwatches();
           saveState();
 
           // Sync to saved themes: create if missing, or prompt to overwrite
@@ -1195,11 +1444,13 @@
       svHandle.style.top = ((1 - pv) * rect.height) + 'px';
     }
     function applyColorToActive(hex) {
-      const idx = state.active;
-      const inp = inputs[idx];
+      const inp = getActiveInput();
       if (!inp) return;
       inp.value = toFullHex(hex);
-      applyPreview(inp, badgesWraps[idx]);
+      const arr = getActiveStateArray();
+      const idx = state.activeIndex;
+      if (arr && arr[idx] !== undefined) arr[idx] = toFullHex(hex);
+      applyPreview(inp, getActiveBadgesWrap());
       saveState();
     }
     function pickerSetHex(hex) {
@@ -1281,21 +1532,6 @@
       pickerSetHex(hex);
       applyColorToActive(hex);
     });
-    if (togglePickerBtn) {
-      togglePickerBtn.addEventListener('click', () => {
-        const show = pickerPanel.hasAttribute('hidden');
-        if (show) {
-          pickerPanel.removeAttribute('hidden');
-          togglePickerBtn.classList.add('active');
-          const hex = toFullHex(inputs[state.active]?.value || state.colors[state.active]);
-          if (hex) pickerSetHex(hex);
-        } else {
-          pickerPanel.setAttribute('hidden', '');
-          togglePickerBtn.classList.remove('active');
-        }
-      });
-    }
-
     // ========= Saved themes UI =========
     function updateThemeStatus() {
       if (!themeStatusIcon || !themeStatusLabel) return;
@@ -1370,10 +1606,14 @@
         if (!hex) return null;
         colors.push(hex);
       }
+      const sentiment = (state.sentimentColors || []).slice(0, 3).map(c => toFullHex(c)).filter(Boolean);
+      const divergent = (state.divergentColors || []).slice(0, 3).map(c => toFullHex(c)).filter(Boolean);
       return {
         name,
         count: state.count,
-        colors
+        colors,
+        sentimentColors: sentiment.length === 3 ? sentiment : DEFAULTS_SENTIMENT.slice(),
+        divergentColors: divergent.length === 3 ? divergent : DEFAULTS_DIVERGENT.slice()
       };
     }
 
@@ -1431,7 +1671,9 @@
         const payload = {
           name,
           count: 8,
-          colors: DEFAULTS.slice(0, 8)
+          colors: DEFAULTS.slice(0, 8),
+          sentimentColors: DEFAULTS_SENTIMENT.slice(),
+          divergentColors: DEFAULTS_DIVERGENT.slice()
         };
         savedThemes.push(payload);
         saveSavedThemes(savedThemes);
@@ -1495,20 +1737,27 @@
     if (stored) {
       state.count = stored.count;
       state.name = stored.name || '';
-      // merge stored colors into state (up to 16)
       for (let i = 0; i < Math.min(stored.colors.length, 16); i++) {
         const h = toFullHex(stored.colors[i]); if (h) state.colors[i] = h;
       }
+      if (stored.sentimentColors && stored.sentimentColors.length === 3)
+        state.sentimentColors = stored.sentimentColors.slice();
+      if (stored.divergentColors && stored.divergentColors.length === 3)
+        state.divergentColors = stored.divergentColors.slice();
+      if (stored.sentimentEnabled !== undefined) state.sentimentEnabled = stored.sentimentEnabled !== false;
+      if (stored.divergentEnabled !== undefined) state.divergentEnabled = stored.divergentEnabled !== false;
       themeNameEl.value = state.name;
     }
 
-    // Load saved themes for multi-theme management
     savedThemes = loadSavedThemes();
     refreshSavedThemesUI('');
     updateThemeStatus();
 
-    setCount(state.count);   // render swatches
-    setActive(0);            // select first
+    setCount(state.count);
+    renderSentimentSwatches();
+    renderDivergentSwatches();
+    updateOptionalSectionsVisibility();
+    setActive('theme', 0);
   </script>
 </body>
 
