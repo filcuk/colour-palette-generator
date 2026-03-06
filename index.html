@@ -47,7 +47,8 @@
     }
 
     .name-wrap,
-    .slider-wrap {
+    .slider-wrap,
+    .themes-manager {
       flex-basis: 100%;
     }
 
@@ -144,6 +145,15 @@
       background: #056ab6
     }
 
+    .actions .btn-action,
+    .actions .btn-action.import-label {
+      font-family: inherit;
+      font-size: inherit;
+      line-height: 1.25;
+      box-sizing: border-box;
+      min-height: 40px;
+    }
+
     .btn-secondary {
       background: #fff;
       color: #111;
@@ -160,10 +170,31 @@
       opacity: .9
     }
 
+    .storage-warning {
+      font: 12px/1.2 var(--font);
+      color: #666;
+      margin-top: 6px;
+    }
+
     .summary {
       margin-top: 10px;
       font: 12px/1.2 var(--font);
       color: #333
+    }
+
+    .page-footer {
+      margin-top: 24px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(0, 0, 0, .1);
+      font: 12px/1.4 var(--font);
+      color: #666;
+    }
+    .page-footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .page-footer a:hover {
+      text-decoration: underline;
     }
 
     .dropzone {
@@ -375,6 +406,19 @@
       <input id="themeName" class="name-input" type="text" placeholder="My Theme" />
     </div>
 
+    <div class="themes-manager">
+      <label for="savedThemes">Saved themes:</label>
+      <select id="savedThemes">
+        <option value="">No saved themes</option>
+      </select>
+      <button id="saveThemeBtn" type="button" title="Save current palette as a named theme">Save theme</button>
+      <button id="newThemeBtn" type="button" title="Create a new theme with default colours and save to storage">New theme</button>
+      <button id="loadThemeBtn" type="button" title="Load the selected saved theme">Load</button>
+      <button id="deleteThemeBtn" type="button" title="Delete the selected saved theme">Delete</button>
+      <button id="resetBtn" class="btn-secondary" type="button" title="Clear all stored themes and reset palette">Reset</button>
+    </div>
+    <p class="storage-warning" style="flex-basis:100%;">Themes are stored only in this browser. Clearing site data, using a different browser or device, or resetting the browser may remove them.</p>
+
     <div class="slider-wrap" title="Pick how many colours to show (1–16)">
       <label for="countSlider">Colours:</label>
       <input id="countSlider" type="range" min="1" max="16" value="8" />
@@ -384,6 +428,8 @@
 
   <!-- Swatches row (dynamically rendered) -->
   <div class="row" id="row" role="group" aria-label="Color swatches"></div>
+
+  <div class="summary" id="summary">Contrast summary: —</div>
 
   <!-- Picker panel -->
   <div class="picker-panel" id="pickerPanel" hidden>
@@ -405,18 +451,14 @@
   </div>
 
   <div class="actions">
-    <button id="downloadBtn" title="Export current palette as SVG">Download SVG</button>
-    <label class="import-label" for="fileInput" title="Import an exported palette SVG">Import SVG</label>
+    <button id="downloadBtn" class="btn-action" type="button" title="Export current palette as SVG">Download SVG</button>
+    <button id="importBtn" class="btn-action" type="button" title="Import an exported palette SVG">Import SVG</button>
     <input id="fileInput" type="file" accept="image/svg+xml,.svg" />
   </div>
 
-  <div style="margin-top: 10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-    <button id="resetBtn" class="btn-secondary" title="Clear saved palette and reset">Reset</button>
-    <span class="hint">Saved automatically to this browser. Live contrast vs <b>black</b> and <b>white</b> (≥
-      4.5:1).</span>
-  </div>
-
-  <div class="summary" id="summary">Contrast summary: —</div>
+  <footer class="page-footer">
+    <a href="https://github.com/filcuk/colour-palette-generator" target="_blank" rel="noopener noreferrer">Colour Palette Generator</a> on GitHub
+  </footer>
 
   <script>
     // ========= Helpers =========
@@ -479,6 +521,7 @@
       '#8E44AD', '#27AE60', '#D35400', '#3498DB', '#E84393', '#16A085', '#C0392B', '#7F8C8D'
     ];
     const STORAGE_KEY = 'colour-palette.v1';
+    const THEMES_KEY = 'colour-palette.themes.v1';
 
     const state = { count: 8, name: '', colors: DEFAULTS.slice(0, 16), active: 0 };
 
@@ -488,6 +531,7 @@
         const payload = { count: state.count, name: state.name || '', colors };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       } catch { }
+      if (!suppressAutoThemeSave) autoSaveThemeIfNamed();
     }
     function loadState() {
       try {
@@ -502,12 +546,38 @@
         };
       } catch { return null; }
     }
+
+    // Saved themes (multiple named palettes)
+    function loadSavedThemes() {
+      try {
+        const raw = localStorage.getItem(THEMES_KEY);
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) return [];
+        return arr.filter(t =>
+          t &&
+          typeof t.name === 'string' &&
+          Array.isArray(t.colors) &&
+          t.colors.length
+        );
+      } catch {
+        return [];
+      }
+    }
+    function saveSavedThemes(list) {
+      try {
+        localStorage.setItem(THEMES_KEY, JSON.stringify(list));
+      } catch { }
+    }
     function resetState() {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(THEMES_KEY);
+      savedThemes = [];
       state.count = 8; state.name = ''; state.colors = DEFAULTS.slice(0, 16); state.active = 0;
       themeNameEl.value = '';
       setCount(state.count); // re-render
       setActive(0);
+      if (savedThemesSelect) refreshSavedThemesUI('');
     }
 
     // ========= DOM refs =========
@@ -515,11 +585,17 @@
     const countSlider = document.getElementById('countSlider');
     const countValue = document.getElementById('countValue');
     const downloadBtn = document.getElementById('downloadBtn');
+    const importBtn = document.getElementById('importBtn');
     const fileInput = document.getElementById('fileInput');
     const dropzone = document.getElementById('dropzone');
     const summaryEl = document.getElementById('summary');
     const themeNameEl = document.getElementById('themeName');
     const resetBtn = document.getElementById('resetBtn');
+    const savedThemesSelect = document.getElementById('savedThemes');
+    const saveThemeBtn = document.getElementById('saveThemeBtn');
+    const newThemeBtn = document.getElementById('newThemeBtn');
+    const loadThemeBtn = document.getElementById('loadThemeBtn');
+    const deleteThemeBtn = document.getElementById('deleteThemeBtn');
 
     const pickerPanel = document.getElementById('pickerPanel');
     const togglePickerBtn = document.getElementById('togglePicker');
@@ -534,6 +610,8 @@
     let wraps = [], inputs = [], badgesWraps = [];
     let ph = 0, ps = 1, pv = 1; // picker HSV
     let dragDepth = 0; // global drag counter for fullscreen dropzone
+    let savedThemes = [];
+    let suppressAutoThemeSave = false; // avoid autosave when programmatically applying themes
 
     // ========= Rendering =========
     function swatchHTML(i, value) {
@@ -753,6 +831,19 @@
       }
     }
 
+    function applySavedTheme(theme) {
+      if (!theme) return;
+      const colors = Array.isArray(theme.colors) ? theme.colors : [];
+      const n = Math.max(1, Math.min(16, theme.count || colors.length || 1));
+      state.name = theme.name || '';
+      themeNameEl.value = state.name;
+      suppressAutoThemeSave = true;
+      setPaletteFromArray(colors);
+      setCount(n);
+      suppressAutoThemeSave = false;
+      saveState();
+    }
+
     function parseSvgPalette(text) {
       try {
         const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
@@ -829,6 +920,9 @@
     }
 
     // File input
+    if (importBtn && fileInput) {
+      importBtn.addEventListener('click', () => fileInput.click());
+    }
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files && e.target.files[0];
       handleSvgImport(file);
@@ -968,8 +1062,122 @@
       });
     }
 
+    // ========= Saved themes UI =========
+    function refreshSavedThemesUI(selectedName) {
+      if (!savedThemesSelect) return;
+      while (savedThemesSelect.firstChild) savedThemesSelect.removeChild(savedThemesSelect.firstChild);
+
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = savedThemes.length ? 'Select saved theme…' : 'No saved themes';
+      savedThemesSelect.appendChild(placeholder);
+
+      savedThemes.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.name;
+        opt.textContent = t.name;
+        savedThemesSelect.appendChild(opt);
+      });
+
+      if (selectedName) savedThemesSelect.value = selectedName;
+    }
+
+    function buildCurrentThemePayload(name) {
+      const colors = [];
+      for (let i = 0; i < state.count; i++) {
+        const hex = toFullHex(inputs[i]?.value || state.colors[i]);
+        if (!hex) return null;
+        colors.push(hex);
+      }
+      return {
+        name,
+        count: state.count,
+        colors
+      };
+    }
+
+    function autoSaveThemeIfNamed() {
+      if (!savedThemesSelect) return;
+      const name = (themeNameEl.value || '').trim();
+      if (!name) return;
+      const payload = buildCurrentThemePayload(name);
+      if (!payload) return;
+      const existingIndex = savedThemes.findIndex(t => t.name === name);
+      if (existingIndex === -1) return; // only auto-save when theme already exists
+      savedThemes[existingIndex] = payload;
+      saveSavedThemes(savedThemes);
+      refreshSavedThemesUI(name);
+    }
+
+    if (saveThemeBtn && newThemeBtn && loadThemeBtn && deleteThemeBtn && savedThemesSelect) {
+      newThemeBtn.addEventListener('click', () => {
+        let name = (prompt('Name for new theme:') || '').trim() || 'New theme';
+        const baseName = name;
+        let n = 1;
+        while (savedThemes.some(t => t.name === name)) {
+          name = baseName + ' ' + (n++);
+        }
+        const payload = {
+          name,
+          count: 8,
+          colors: DEFAULTS.slice(0, 8)
+        };
+        savedThemes.push(payload);
+        saveSavedThemes(savedThemes);
+        refreshSavedThemesUI(name);
+        applySavedTheme(payload);
+      });
+
+      saveThemeBtn.addEventListener('click', () => {
+        const name = (themeNameEl.value || '').trim();
+        if (!name) {
+          alert('Please enter a theme name before saving.');
+          themeNameEl.focus();
+          return;
+        }
+        const payload = buildCurrentThemePayload(name);
+        if (!payload) {
+          alert('Please fix invalid hex values before saving this theme.');
+          return;
+        }
+        const existingIndex = savedThemes.findIndex(t => t.name === name);
+        if (existingIndex !== -1) {
+          if (!confirm(`A theme named "${name}" already exists. Overwrite it?`)) return;
+          savedThemes[existingIndex] = payload;
+        } else {
+          savedThemes.push(payload);
+        }
+        saveSavedThemes(savedThemes);
+        refreshSavedThemesUI(name);
+      });
+
+      // Automatically load a theme when it is selected
+      savedThemesSelect.addEventListener('change', () => {
+        const name = savedThemesSelect.value;
+        if (!name) return;
+        const theme = savedThemes.find(t => t.name === name);
+        if (!theme) return;
+        applySavedTheme(theme);
+      });
+
+      deleteThemeBtn.addEventListener('click', () => {
+        const name = savedThemesSelect.value;
+        if (!name) {
+          alert('Please select a saved theme to delete.');
+          return;
+        }
+        if (!confirm(`Delete the theme "${name}"? This cannot be undone.`)) return;
+        savedThemes = savedThemes.filter(t => t.name !== name);
+        saveSavedThemes(savedThemes);
+        refreshSavedThemesUI('');
+      });
+    }
+
     // ========= Reset =========
-    resetBtn.addEventListener('click', resetState);
+    resetBtn.addEventListener('click', () => {
+      if (!confirm('Clear all stored themes and reset palette to defaults? This cannot be undone.')) return;
+      resetState();
+    });
 
     // ========= Init: restore from localStorage if present =========
     const stored = loadState();
@@ -982,6 +1190,11 @@
       }
       themeNameEl.value = state.name;
     }
+
+    // Load saved themes for multi-theme management
+    savedThemes = loadSavedThemes();
+    refreshSavedThemesUI('');
+
     setCount(state.count);   // render swatches
     setActive(0);            // select first
   </script>
