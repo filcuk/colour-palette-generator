@@ -44,8 +44,8 @@
       display: flex;
       gap: var(--gap);
       align-items: flex-start;
-      overflow-x: auto;
-      padding-bottom: 8px;
+      flex-wrap: wrap;
+      overflow-x: visible;
       margin-top: 12px
     }
 
@@ -88,9 +88,9 @@
 
     .badges {
       display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      justify-content: center
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
     }
 
     .badge {
