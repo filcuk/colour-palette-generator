@@ -1339,6 +1339,9 @@
       }
       renderSentimentSwatches();
       renderDivergentSwatches();
+      state.sentimentEnabled = theme.sentimentEnabled !== false;
+      state.divergentEnabled = theme.divergentEnabled !== false;
+      updateOptionalSectionsVisibility();
       suppressAutoThemeSave = false;
       saveState();
       updateThemeStatus();
@@ -1772,7 +1775,9 @@
         count: state.count,
         colors,
         sentimentColors: sentiment.length === 3 ? sentiment : DEFAULTS_SENTIMENT.slice(),
-        divergentColors: divergent.length === 3 ? divergent : DEFAULTS_DIVERGENT.slice()
+        divergentColors: divergent.length === 3 ? divergent : DEFAULTS_DIVERGENT.slice(),
+        sentimentEnabled: !!state.sentimentEnabled,
+        divergentEnabled: !!state.divergentEnabled
       };
     }
 
@@ -1832,7 +1837,9 @@
           count: 8,
           colors: DEFAULTS.slice(0, 8),
           sentimentColors: DEFAULTS_SENTIMENT.slice(),
-          divergentColors: DEFAULTS_DIVERGENT.slice()
+          divergentColors: DEFAULTS_DIVERGENT.slice(),
+          sentimentEnabled: !!state.sentimentEnabled,
+          divergentEnabled: !!state.divergentEnabled
         };
         savedThemes.push(payload);
         saveSavedThemes(savedThemes);
