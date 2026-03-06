@@ -416,9 +416,20 @@
 
     .picker {
       display: flex;
-      gap: 12px;
-      align-items: center;
+      gap: 16px;
+      align-items: flex-start;
       flex-wrap: wrap;
+    }
+    .picker-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .picker-col-inputs {
+      min-width: 140px;
+    }
+    .picker-col-right {
+      min-width: 200px;
     }
 
     .sv {
@@ -510,6 +521,29 @@
       text-align: right;
     }
 
+    .picker-shades {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .picker-shade {
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, .2);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
+      cursor: pointer;
+      flex-shrink: 0;
+      background: #e0e0e0;
+    }
+    .picker-shade.narrow {
+      width: 28px;
+      height: 40px;
+    }
+    .picker-shade.center {
+      width: 56px;
+      height: 56px;
+    }
+
     .quick-row {
       display: flex;
       gap: 6px;
@@ -593,15 +627,14 @@
     <p class="tip" id="summary" style="margin-top:10px; margin-bottom:0;">ℹ️ Contrast summary: —</p>
     <div class="picker-panel" id="pickerPanel">
       <div class="picker">
-        <div>
-          <div id="sv" class="sv" aria-label="Saturation/Value area">
-            <div id="svHandle" class="sv-handle" style="left:0px; top:0px;"></div>
+        <div class="picker-col picker-col-inputs">
+          <div class="picker-shades" id="pickerShades" title="Click a shade to apply">
+            <div class="picker-shade narrow" id="pickerShade0" data-hex="" role="button" aria-label="Lighter shade"></div>
+            <div class="picker-shade narrow" id="pickerShade1" data-hex="" role="button" aria-label="Lighter shade"></div>
+            <div class="picker-shade center" id="pickerShade2" data-hex="" role="button" aria-label="Current colour"></div>
+            <div class="picker-shade narrow" id="pickerShade3" data-hex="" role="button" aria-label="Darker shade"></div>
+            <div class="picker-shade narrow" id="pickerShade4" data-hex="" role="button" aria-label="Darker shade"></div>
           </div>
-          <div id="hue" class="hue" aria-label="Hue slider" style="margin-top:10px;">
-            <div id="hueHandle" class="hue-handle" style="left:0px;"></div>
-          </div>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:8px;">
           <div class="picker-input-row">
             <label>HEX</label>
             <input id="pickerHex" class="picker-hex" placeholder="#RRGGBB" />
@@ -619,6 +652,16 @@
             <input id="pickerY" type="text" inputmode="numeric" placeholder="Y" maxlength="3" title="Yellow 0–100" />
             <input id="pickerK" type="text" inputmode="numeric" placeholder="K" maxlength="3" title="Key 0–100" />
           </div>
+        </div>
+        <div class="picker-col picker-col-sv">
+          <div id="sv" class="sv" aria-label="Saturation/Value area">
+            <div id="svHandle" class="sv-handle" style="left:0px; top:0px;"></div>
+          </div>
+          <div id="hue" class="hue" aria-label="Hue slider" style="margin-top:10px;">
+            <div id="hueHandle" class="hue-handle" style="left:0px;"></div>
+          </div>
+        </div>
+        <div class="picker-col picker-col-right">
           <div class="quick-row" id="quickRow" title="Quick colours"></div>
         </div>
       </div>
@@ -1416,6 +1459,38 @@
     });
 
     // ========= Simple Color Picker Logic =========
+    function blendHex(hex1, hex2, t) {
+      const a = hexToRgb(hex1);
+      const b = hexToRgb(hex2);
+      const r = Math.round(a.r * (1 - t) + b.r * t);
+      const g = Math.round(a.g * (1 - t) + b.g * t);
+      const bl = Math.round(a.b * (1 - t) + b.b * t);
+      return rgbToHex(Math.max(0, Math.min(255, r)), Math.max(0, Math.min(255, g)), Math.max(0, Math.min(255, bl)));
+    }
+
+    function getShadeHexes(hex) {
+      const full = toFullHex(hex);
+      if (!full) return [];
+      const lighter2 = blendHex(full, '#FFFFFF', 0.4);
+      const lighter1 = blendHex(full, '#FFFFFF', 0.2);
+      const darker1 = blendHex(full, '#000000', 0.2);
+      const darker2 = blendHex(full, '#000000', 0.4);
+      return [lighter2, lighter1, full, darker1, darker2];
+    }
+
+    function updatePickerShades(hex) {
+      const shades = getShadeHexes(hex);
+      const container = document.getElementById('pickerShades');
+      if (!container) return;
+      const boxes = container.querySelectorAll('.picker-shade');
+      shades.forEach((h, i) => {
+        if (boxes[i]) {
+          boxes[i].style.background = h;
+          boxes[i].dataset.hex = h;
+        }
+      });
+    }
+
     function pickerPreview(hex) {
       const full = toFullHex(hex);
       if (!full) return;
@@ -1429,6 +1504,7 @@
       if (pickerM) pickerM.value = String(cmyk.m);
       if (pickerY) pickerY.value = String(cmyk.y);
       if (pickerK) pickerK.value = String(cmyk.k);
+      updatePickerShades(full);
     }
     function pickerSetHue(h) {
       ph = (h + 360) % 360;
@@ -1544,6 +1620,16 @@
       pickerSetHex(hex);
       applyColorToActive(hex);
     });
+    const pickerShadesEl = document.getElementById('pickerShades');
+    if (pickerShadesEl) {
+      pickerShadesEl.addEventListener('click', (e) => {
+        const box = e.target.closest('.picker-shade');
+        const hex = box?.dataset?.hex;
+        if (!hex) return;
+        pickerSetHex(hex);
+        applyColorToActive(hex);
+      });
+    }
     // ========= Saved themes UI =========
     function updateThemeStatus() {
       if (!themeStatusIcon || !themeStatusLabel) return;
