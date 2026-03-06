@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8" />
-  <title>Palette (1–16) → SVG + Dual Contrast + Import/Export + Picker + Save</title>
+  <title>Colour Palette Generator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
@@ -32,12 +32,23 @@
       font-weight: 600;
     }
 
+    .subtitle {
+      margin: -8px 0 14px;
+      color: #444;
+      font: 12px/1.4 var(--font);
+    }
+
     .controls {
       margin-top: 12px;
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       align-items: center
+    }
+
+    .name-wrap,
+    .slider-wrap {
+      flex-basis: 100%;
     }
 
     .row {
@@ -168,6 +179,19 @@
     .dropzone.dragover {
       border-color: var(--accent);
       background: #eef6ff
+    }
+
+    .dropzone.fullscreen {
+      position: fixed;
+      inset: 0;
+      margin: 0;
+      border-radius: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(247, 247, 248, 0.98);
+      z-index: 9999;
+      font-size: 14px;
     }
 
     .slider-wrap {
@@ -318,6 +342,14 @@
       max-width: 240px
     }
 
+    .actions {
+      margin-top: 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
     .chip {
       width: 22px;
       height: 22px;
@@ -329,7 +361,12 @@
 </head>
 
 <body>
-  <h1>Color Palette → SVG</h1>
+  <h1>Colour Palette Generator</h1>
+  <div class="subtitle">Generate a colour palette, export to svg, re-import back.</div>
+
+  <div class="dropzone" id="dropzone">💡 Tip: drag &amp; drop an exported SVG here to restore the theme and
+    palette.
+  </div>
 
   <!-- Controls -->
   <div class="controls">
@@ -343,18 +380,6 @@
       <input id="countSlider" type="range" min="1" max="16" value="8" />
       <output id="countValue">8</output>
     </div>
-
-    <button id="downloadBtn" title="Export current palette as SVG">Download SVG</button>
-    <button id="normalizeBtn" title="Format all visible inputs to #RRGGBB">Normalize hex</button>
-
-    <label class="import-label" for="fileInput" title="Import an exported palette SVG">Import SVG</label>
-    <input id="fileInput" type="file" accept="image/svg+xml,.svg" />
-
-    <button id="togglePicker" class="picker-btn" title="Show/hide the built-in color picker">🎨 Color Picker</button>
-    <button id="resetBtn" class="btn-secondary" title="Clear saved palette and reset">Reset</button>
-
-    <span class="hint">Saved automatically to this browser. Live contrast vs <b>black</b> and <b>white</b> (≥
-      4.5:1).</span>
   </div>
 
   <!-- Swatches row (dynamically rendered) -->
@@ -379,8 +404,18 @@
     </div>
   </div>
 
-  <div class="dropzone" id="dropzone">💡 Tip: drag &amp; drop an exported SVG here to restore the theme and palette.
+  <div class="actions">
+    <button id="downloadBtn" title="Export current palette as SVG">Download SVG</button>
+    <label class="import-label" for="fileInput" title="Import an exported palette SVG">Import SVG</label>
+    <input id="fileInput" type="file" accept="image/svg+xml,.svg" />
   </div>
+
+  <div style="margin-top: 10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+    <button id="resetBtn" class="btn-secondary" title="Clear saved palette and reset">Reset</button>
+    <span class="hint">Saved automatically to this browser. Live contrast vs <b>black</b> and <b>white</b> (≥
+      4.5:1).</span>
+  </div>
+
   <div class="summary" id="summary">Contrast summary: —</div>
 
   <script>
@@ -479,7 +514,6 @@
     const rowEl = document.getElementById('row');
     const countSlider = document.getElementById('countSlider');
     const countValue = document.getElementById('countValue');
-    const normalizeBtn = document.getElementById('normalizeBtn');
     const downloadBtn = document.getElementById('downloadBtn');
     const fileInput = document.getElementById('fileInput');
     const dropzone = document.getElementById('dropzone');
@@ -499,6 +533,7 @@
 
     let wraps = [], inputs = [], badgesWraps = [];
     let ph = 0, ps = 1, pv = 1; // picker HSV
+    let dragDepth = 0; // global drag counter for fullscreen dropzone
 
     // ========= Rendering =========
     function swatchHTML(i, value) {
@@ -640,10 +675,12 @@
     });
 
     // ========= Normalize current =========
-    normalizeBtn.addEventListener('click', () => {
-      inputs.forEach((inp, i) => { normalizeInput(inp, badgesWraps[i]); });
-      saveState();
-    });
+    if (typeof normalizeBtn !== 'undefined' && normalizeBtn) {
+      normalizeBtn.addEventListener('click', () => {
+        inputs.forEach((inp, i) => { normalizeInput(inp, badgesWraps[i]); });
+        saveState();
+      });
+    }
 
     // ========= Export SVG (only colours shown; includes theme name) =========
     downloadBtn.addEventListener('click', () => {
@@ -794,14 +831,26 @@
       fileInput.value = '';
     });
 
-    // Drag & drop
-    ['dragenter', 'dragover'].forEach(ev => dropzone.addEventListener(ev, (e) => {
-      e.preventDefault(); e.stopPropagation(); dropzone.classList.add('dragover');
+    // Drag & drop — fullscreen overlay when dragging files
+    ['dragenter', 'dragover'].forEach(ev => window.addEventListener(ev, (e) => {
+      e.preventDefault(); e.stopPropagation();
+      dragDepth++;
+      dropzone.classList.add('dragover', 'fullscreen');
     }));
-    ['dragleave', 'drop'].forEach(ev => dropzone.addEventListener(ev, (e) => {
-      e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('dragover');
+    ['dragleave', 'drop'].forEach(ev => window.addEventListener(ev, (e) => {
+      e.preventDefault(); e.stopPropagation();
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) {
+        dropzone.classList.remove('dragover', 'fullscreen');
+      }
     }));
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+    });
     dropzone.addEventListener('drop', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      dragDepth = 0;
+      dropzone.classList.remove('dragover', 'fullscreen');
       const file = e.dataTransfer?.files?.[0];
       if (file && (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg'))) {
         handleSvgImport(file);
@@ -900,18 +949,20 @@
       pickerSetHex(hex);
       applyColorToActive(hex);
     });
-    togglePickerBtn.addEventListener('click', () => {
-      const show = pickerPanel.hasAttribute('hidden');
-      if (show) {
-        pickerPanel.removeAttribute('hidden');
-        togglePickerBtn.classList.add('active');
-        const hex = toFullHex(inputs[state.active]?.value || state.colors[state.active]);
-        if (hex) pickerSetHex(hex);
-      } else {
-        pickerPanel.setAttribute('hidden', '');
-        togglePickerBtn.classList.remove('active');
-      }
-    });
+    if (togglePickerBtn) {
+      togglePickerBtn.addEventListener('click', () => {
+        const show = pickerPanel.hasAttribute('hidden');
+        if (show) {
+          pickerPanel.removeAttribute('hidden');
+          togglePickerBtn.classList.add('active');
+          const hex = toFullHex(inputs[state.active]?.value || state.colors[state.active]);
+          if (hex) pickerSetHex(hex);
+        } else {
+          pickerPanel.setAttribute('hidden', '');
+          togglePickerBtn.classList.remove('active');
+        }
+      });
+    }
 
     // ========= Reset =========
     resetBtn.addEventListener('click', resetState);
