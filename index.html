@@ -965,15 +965,16 @@
       `;
     }
 
-    function showContrastTooltip(contrastEl, e) {
+    function showContrastTooltip(contrastEl) {
       const text = contrastEl.dataset.tooltip;
       if (!contrastTooltipEl || !text) return;
       contrastTooltipEl.textContent = text;
       contrastTooltipEl.classList.add('visible');
       contrastTooltipEl.setAttribute('aria-hidden', 'false');
-      const offset = 10;
-      const x = e.clientX;
-      const y = e.clientY + offset;
+      const offset = 8;
+      const rect = contrastEl.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.bottom + offset;
       contrastTooltipEl.style.left = x + 'px';
       contrastTooltipEl.style.top = y + 'px';
       contrastTooltipEl.style.transform = 'translateX(-50%)';
@@ -995,7 +996,7 @@
         inp.addEventListener('focus', () => setActive(section, idx));
         inp.addEventListener('click', () => setActive(section, idx));
         if (contrastEl) {
-          contrastEl.addEventListener('mouseenter', (e) => showContrastTooltip(contrastEl, e));
+          contrastEl.addEventListener('mouseenter', () => showContrastTooltip(contrastEl));
           contrastEl.addEventListener('mouseleave', () => hideContrastTooltip());
         }
       });
