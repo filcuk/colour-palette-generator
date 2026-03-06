@@ -46,12 +46,9 @@
       align-items: center
     }
 
-    .name-wrap,
-    .slider-wrap,
-    .themes-manager {
+    .slider-wrap {
       flex-basis: 100%;
     }
-
     .row {
       display: flex;
       gap: var(--gap);
@@ -182,8 +179,8 @@
       gap: 6px;
       font: 12px/1.2 var(--font);
       color: #555;
-      flex-basis: 100%;
-      margin-top: 6px;
+      flex: 0 0 auto;
+      margin-top: 0;
     }
     .theme-status-icon {
       display: inline-flex;
@@ -273,19 +270,79 @@
       font: 600 13px/1 var(--font)
     }
 
-    .name-wrap {
+    .themes-manager {
+      flex-basis: 100%;
       display: flex;
       align-items: center;
-      gap: 8px
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
-    .name-input {
-      padding: 9px 12px;
-      border-radius: 8px;
+    .theme-combo {
+      position: relative;
+      display: inline-flex;
+      align-items: stretch;
+    }
+
+    .theme-combo-input {
+      padding: 9px 36px 9px 12px;
+      border-radius: 8px 0 0 8px;
       border: 1px solid rgba(0, 0, 0, .15);
+      border-right: none;
       background: #fff;
       font: 600 14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      min-width: 240px;
+      min-width: 200px;
+    }
+
+    .theme-combo-trigger {
+      padding: 0 10px;
+      border: 1px solid rgba(0, 0, 0, .15);
+      border-left: none;
+      border-radius: 0 8px 8px 0;
+      background: #f5f5f5;
+      cursor: pointer;
+      font-size: 10px;
+      color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .theme-combo-trigger:hover {
+      background: #eee;
+    }
+
+    .theme-combo-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin: 2px 0 0;
+      padding: 4px 0;
+      list-style: none;
+      background: #fff;
+      border: 1px solid rgba(0, 0, 0, .15);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+    .theme-combo-list.open {
+      display: block;
+    }
+    .theme-combo-list li {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .theme-combo-list li:hover,
+    .theme-combo-list li[aria-selected="true"] {
+      background: #f0f4ff;
+    }
+    .theme-combo-list li.empty {
+      color: #888;
+      cursor: default;
     }
 
     /* ===== Simple Custom Color Picker ===== */
@@ -448,29 +505,25 @@
 
   <!-- Controls -->
   <div class="controls">
-    <div class="name-wrap" title="Name your theme; used for export file name and stored in SVG">
-      <label for="themeName">Theme name:</label>
-      <input id="themeName" class="name-input" type="text" placeholder="My Theme" />
-    </div>
-
-    <div class="themes-manager">
-      <label for="savedThemes">Saved themes:</label>
-      <select id="savedThemes">
-        <option value="">No saved themes</option>
-      </select>
+    <div class="themes-manager" title="Name your theme or pick a saved one; used for export and stored in SVG">
+      <label for="themeName">Theme:</label>
+      <div class="theme-combo">
+        <input id="themeName" class="theme-combo-input" type="text" placeholder="My theme or pick saved…" autocomplete="off" />
+        <button type="button" class="theme-combo-trigger" id="themeComboTrigger" aria-label="Open saved themes" aria-expanded="false" aria-haspopup="listbox">▼</button>
+        <ul id="themeComboList" class="theme-combo-list" role="listbox" aria-hidden="true"></ul>
+      </div>
       <button id="saveThemeBtn" type="button" title="Save current palette as a named theme">Save theme</button>
       <button id="newThemeBtn" type="button" title="Create a new theme with default colours and save to storage">New theme</button>
-      <button id="loadThemeBtn" type="button" title="Load the selected saved theme">Load</button>
-      <button id="deleteThemeBtn" type="button" title="Delete the selected saved theme">Delete</button>
+      <button id="deleteThemeBtn" type="button" title="Delete the theme with the current name">Delete</button>
       <button id="resetBtn" class="btn-secondary" type="button" title="Clear all stored themes and reset palette">Reset</button>
-      <div class="theme-status" id="themeStatus" role="status" aria-live="polite" style="flex-basis:100%;">
+      <div class="theme-status" id="themeStatus" role="status" aria-live="polite">
         <span class="theme-status-icon" id="themeStatusIcon" aria-hidden="true"></span>
         <span class="theme-status-label" id="themeStatusLabel">—</span>
       </div>
     </div>
     <p class="tip" style="flex-basis:100%;">⚠️ Themes are stored only in this browser. Clearing site data, using a different browser or device, or resetting the browser may remove them.</p>
 
-    <div class="slider-wrap" title="Pick how many colours to show (1–16)">
+    <div class="slider-wrap" title="Pick how many colours to show (1-16)">
       <label for="countSlider">Colours:</label>
       <input id="countSlider" type="range" min="1" max="16" value="8" />
       <output id="countValue">8</output>
@@ -671,7 +724,7 @@
       themeNameEl.value = '';
       setCount(state.count); // re-render
       setActive(0);
-      if (savedThemesSelect) refreshSavedThemesUI('');
+      if (themeComboList) refreshSavedThemesUI('');
       themeDirty = false;
       updateThemeStatus();
     }
@@ -687,12 +740,12 @@
     const summaryEl = document.getElementById('summary');
     const themeNameEl = document.getElementById('themeName');
     const resetBtn = document.getElementById('resetBtn');
-    const savedThemesSelect = document.getElementById('savedThemes');
+    const themeComboTrigger = document.getElementById('themeComboTrigger');
+    const themeComboList = document.getElementById('themeComboList');
     const themeStatusIcon = document.getElementById('themeStatusIcon');
     const themeStatusLabel = document.getElementById('themeStatusLabel');
     const saveThemeBtn = document.getElementById('saveThemeBtn');
     const newThemeBtn = document.getElementById('newThemeBtn');
-    const loadThemeBtn = document.getElementById('loadThemeBtn');
     const deleteThemeBtn = document.getElementById('deleteThemeBtn');
 
     const pickerPanel = document.getElementById('pickerPanel');
@@ -862,10 +915,6 @@
       state.name = themeNameEl.value;
       themeDirty = true;
       updateThemeStatus();
-      const name = (themeNameEl.value || '').trim();
-      if (savedThemesSelect && (!name || !savedThemes.some(t => t.name === name))) {
-        savedThemesSelect.value = '';
-      }
       saveState();
     });
 
@@ -1244,22 +1293,41 @@
     }
 
     function refreshSavedThemesUI(selectedName) {
-      if (!savedThemesSelect) return;
-      while (savedThemesSelect.firstChild) savedThemesSelect.removeChild(savedThemesSelect.firstChild);
+      if (!themeComboList) return;
+      themeComboList.innerHTML = '';
+      themeComboList.removeAttribute('aria-activedescendant');
 
-      const placeholder = document.createElement('option');
-      placeholder.value = '';
-      placeholder.textContent = savedThemes.length ? 'Select saved theme…' : 'No saved themes';
-      savedThemesSelect.appendChild(placeholder);
+      if (savedThemes.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'empty';
+        li.textContent = 'No saved themes';
+        li.setAttribute('aria-selected', 'false');
+        themeComboList.appendChild(li);
+        return;
+      }
 
       savedThemes.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t.name;
-        opt.textContent = t.name;
-        savedThemesSelect.appendChild(opt);
+        const li = document.createElement('li');
+        li.textContent = t.name;
+        li.setAttribute('role', 'option');
+        li.setAttribute('aria-selected', t.name === selectedName ? 'true' : 'false');
+        li.dataset.themeName = t.name;
+        themeComboList.appendChild(li);
       });
+    }
 
-      if (selectedName) savedThemesSelect.value = selectedName;
+    function openThemeCombo() {
+      if (!themeComboList) return;
+      themeComboList.classList.add('open');
+      themeComboList.setAttribute('aria-hidden', 'false');
+      if (themeComboTrigger) themeComboTrigger.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeThemeCombo() {
+      if (!themeComboList) return;
+      themeComboList.classList.remove('open');
+      themeComboList.setAttribute('aria-hidden', 'true');
+      if (themeComboTrigger) themeComboTrigger.setAttribute('aria-expanded', 'false');
     }
 
     function buildCurrentThemePayload(name) {
@@ -1277,7 +1345,7 @@
     }
 
     function autoSaveThemeIfNamed() {
-      if (!savedThemesSelect) return;
+      if (!themeComboList) return;
       const name = (themeNameEl.value || '').trim();
       if (!name) return;
       const payload = buildCurrentThemePayload(name);
@@ -1291,7 +1359,35 @@
       updateThemeStatus();
     }
 
-    if (saveThemeBtn && newThemeBtn && loadThemeBtn && deleteThemeBtn && savedThemesSelect) {
+    if (saveThemeBtn && newThemeBtn && deleteThemeBtn && themeComboList) {
+      if (themeComboTrigger) {
+        themeComboTrigger.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (themeComboList.classList.contains('open')) closeThemeCombo();
+          else { refreshSavedThemesUI((themeNameEl.value || '').trim()); openThemeCombo(); }
+        });
+      }
+
+      themeComboList.addEventListener('click', (e) => {
+        const li = e.target.closest('li[data-theme-name]');
+        if (!li) return;
+        const name = li.dataset.themeName;
+        const theme = savedThemes.find(t => t.name === name);
+        if (theme) {
+          themeNameEl.value = name;
+          state.name = name;
+          applySavedTheme(theme);
+          closeThemeCombo();
+          updateThemeStatus();
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        if (themeComboList && themeComboList.classList.contains('open') &&
+            !themeComboList.contains(e.target) && e.target !== themeComboTrigger && !themeComboTrigger?.contains(e.target))
+          closeThemeCombo();
+      });
+
       newThemeBtn.addEventListener('click', () => {
         let name = (prompt('Name for new theme:') || '').trim() || 'New theme';
         const baseName = name;
@@ -1335,25 +1431,22 @@
         updateThemeStatus();
       });
 
-      // Automatically load a theme when it is selected
-      savedThemesSelect.addEventListener('change', () => {
-        const name = savedThemesSelect.value;
-        if (!name) return;
-        const theme = savedThemes.find(t => t.name === name);
-        if (!theme) return;
-        applySavedTheme(theme);
-      });
-
       deleteThemeBtn.addEventListener('click', () => {
-        const name = savedThemesSelect.value;
+        const name = (themeNameEl.value || '').trim();
         if (!name) {
-          alert('Please select a saved theme to delete.');
+          alert('Please enter or select a theme name to delete.');
+          return;
+        }
+        if (!savedThemes.some(t => t.name === name)) {
+          alert(`No saved theme named "${name}".`);
           return;
         }
         if (!confirm(`Delete the theme "${name}"? This cannot be undone.`)) return;
         savedThemes = savedThemes.filter(t => t.name !== name);
         saveSavedThemes(savedThemes);
         refreshSavedThemesUI('');
+        themeNameEl.value = '';
+        state.name = '';
         updateThemeStatus();
       });
     }
