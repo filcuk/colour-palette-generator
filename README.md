@@ -6,6 +6,8 @@
 
 ## Features
 - Choose palette size
-- Enter colours in HEX
+- Enter colours in HEX, RGB or CYMK
 - Validate B/W contrast
-- Export to SVG (can be imported back)
+- Store palettes in browser
+- Export to svg image
+- Import back from svg image
