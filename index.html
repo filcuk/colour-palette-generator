@@ -660,7 +660,7 @@
           </div>
           <div class="picker-input-row">
             <label>HEX</label>
-            <input id="pickerHex" class="picker-hex" placeholder="#RRGGBB" />
+            <input id="pickerHex" class="picker-hex" type="text" dir="ltr" placeholder="#RRGGBB" autocomplete="off" />
           </div>
           <div class="picker-input-row">
             <label>RGB</label>
@@ -1530,7 +1530,11 @@
     function pickerPreview(hex) {
       const full = toFullHex(hex);
       if (!full) return;
-      pickerHexEl.value = full;
+      if (pickerHexEl) {
+        pickerHexEl.value = full;
+        pickerHexEl.setAttribute('dir', 'ltr');
+        pickerHexEl.style.textAlign = 'left';
+      }
       const rgb = hexToRgb(full);
       if (pickerR) pickerR.value = String(rgb.r);
       if (pickerG) pickerG.value = String(rgb.g);
@@ -1617,10 +1621,31 @@
       pickerSetHue(hueEventToH(e));
     }
     hueEl.addEventListener('mousedown', startHueDrag);
-    pickerHexEl.addEventListener('input', () => {
-      const full = toPreviewableHex(pickerHexEl.value || '');
-      if (full) { pickerSetHex(full); applyColorToActive(full); }
-    });
+
+    if (pickerHexEl) {
+      pickerHexEl.setAttribute('dir', 'ltr');
+      pickerHexEl.style.textAlign = 'left';
+      pickerHexEl.addEventListener('input', () => {
+        const prev = pickerHexEl.value || '';
+        const selStart = pickerHexEl.selectionStart;
+        let raw = prev.replace(/[^#0-9A-Fa-f]/g, '');
+        if (raw.indexOf('#') > 0) raw = raw.replace(/#/g, '');
+        if (raw.startsWith('#')) {
+          if (raw.length > 7) raw = raw.slice(0, 7);
+        } else {
+          if (raw.length > 6) raw = raw.slice(0, 6);
+        }
+        raw = raw.toUpperCase();
+        if (raw !== prev) {
+          const validBefore = (prev.slice(0, selStart).match(/[#0-9A-Fa-f]/gi) || []).length;
+          const newPos = Math.min(validBefore, raw.length);
+          pickerHexEl.value = raw;
+          pickerHexEl.setSelectionRange(newPos, newPos);
+        }
+        const full = toPreviewableHex(raw || '');
+        if (full) { pickerSetHex(full); applyColorToActive(full); }
+      });
+    }
 
     function tryApplyRgb() {
       if (!pickerR || !pickerG || !pickerB) return;
