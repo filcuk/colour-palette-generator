@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Palette (1–16) → SVG + Dual Contrast + Import/Export + Picker + Save</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --gap: 12px;
+      --size: 90px;
+      --radius: 10px;
+      --font: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --border: 1px solid rgba(0, 0, 0, .15);
+      --shadow: 0 5px 20px rgba(0, 0, 0, .06);
+      --ok: #0f7b0f;
+      --bad: #c83532;
+      --ink: #111;
+      --accent: #0078d4;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 28px;
+      background: #f7f7f8;
+      color: var(--ink);
+    }
+
+    h1 {
+      font-size: 1.1rem;
+      margin: 0 0 14px;
+      font-weight: 600;
+    }
+
+    .controls {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center
+    }
+
+    .row {
+      display: flex;
+      gap: var(--gap);
+      align-items: flex-start;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      margin-top: 12px
+    }
+
+    .swatch-wrap {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px
+    }
+
+    .swatch-wrap.active .swatch-input {
+      outline: 2px solid var(--accent)
+    }
+
+    .swatch-input {
+      width: var(--size);
+      height: var(--size);
+      border-radius: var(--radius);
+      border: var(--border);
+      box-shadow: var(--shadow);
+      text-align: center;
+      font: 700 16px/1 var(--font);
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      color: var(--ink);
+      background: #fff;
+      outline: none;
+      transition: transform .08s, box-shadow .12s, background .1s;
+      caret-color: currentColor;
+    }
+
+    .swatch-input:focus {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 22px rgba(0, 0, 0, .10)
+    }
+
+    .swatch-input.invalid {
+      outline: 2px solid #c80000
+    }
+
+    .badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center
+    }
+
+    .badge {
+      font: 11px/1.2 var(--font);
+      padding: 4px 6px;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, .08);
+      background: #fff;
+      white-space: nowrap;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .06)
+    }
+
+    .badge.pass {
+      color: var(--ok);
+      border-color: rgba(15, 123, 15, .25)
+    }
+
+    .badge.fail {
+      color: var(--bad);
+      border-color: rgba(200, 53, 50, .25)
+    }
+
+    button,
+    .import-label {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    button:hover,
+    .import-label:hover {
+      background: #056ab6
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: #111;
+      border: 1px solid rgba(0, 0, 0, .15)
+    }
+
+    input[type="file"] {
+      display: none
+    }
+
+    .hint {
+      font: 12px/1.2 var(--font);
+      color: #444;
+      opacity: .9
+    }
+
+    .summary {
+      margin-top: 10px;
+      font: 12px/1.2 var(--font);
+      color: #333
+    }
+
+    .dropzone {
+      margin-top: 10px;
+      border: 2px dashed rgba(0, 0, 0, .2);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: 12px/1.2 var(--font);
+      color: #444;
+      background: #fff
+    }
+
+    .dropzone.dragover {
+      border-color: var(--accent);
+      background: #eef6ff
+    }
+
+    .slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px
+    }
+
+    .slider-wrap output {
+      min-width: 2ch;
+      text-align: right;
+      font: 600 13px/1 var(--font)
+    }
+
+    .name-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .name-input {
+      padding: 9px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, .15);
+      background: #fff;
+      font: 600 14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      min-width: 240px;
+    }
+
+    /* ===== Simple Custom Color Picker ===== */
+    .picker-panel {
+      margin-top: 14px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      background: #fff;
+      border: 1px solid rgba(0, 0, 0, .12);
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, .06);
+    }
+
+    .picker-btn {
+      background: #fff;
+      color: #111;
+      border: 1px solid rgba(0, 0, 0, .15);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-weight: 600;
+      cursor: pointer
+    }
+
+    .picker-btn.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px #e6f2ff
+    }
+
+    .picker {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .sv {
+      position: relative;
+      width: 220px;
+      height: 150px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 0, 0, .15);
+      background: red;
+      /* replaced dynamically to hue base */
+      cursor: crosshair;
+    }
+
+    .sv::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, #fff, rgba(255, 255, 255, 0));
+    }
+
+    .sv::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(0deg, #000, rgba(0, 0, 0, 0));
+    }
+
+    .sv-handle {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      margin: -6px 0 0 -6px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, .6);
+      pointer-events: none;
+    }
+
+    .hue {
+      position: relative;
+      height: 16px;
+      width: 220px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 0, 0, .15);
+      background: linear-gradient(90deg, red, #ff0, #0f0, #0ff, #00f, #f0f, red);
+      cursor: pointer;
+    }
+
+    .hue-handle {
+      position: absolute;
+      top: 50%;
+      width: 12px;
+      height: 12px;
+      margin-top: -6px;
+      transform: translateX(-6px);
+      border: 2px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, .6);
+      pointer-events: none;
+    }
+
+    .preview {
+      width: 56px;
+      height: 56px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, .15);
+      box-shadow: var(--shadow);
+    }
+
+    .picker-hex {
+      font: 600 13px/1.2 var(--font);
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, .15);
+      width: 120px;
+      text-transform: uppercase;
+    }
+
+    .quick-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      max-width: 240px
+    }
+
+    .chip {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      border: 1px solid rgba(0, 0, 0, .2);
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Color Palette → SVG</h1>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="name-wrap" title="Name your theme; used for export file name and stored in SVG">
+      <label for="themeName">Theme name:</label>
+      <input id="themeName" class="name-input" type="text" placeholder="My Theme" />
+    </div>
+
+    <div class="slider-wrap" title="Pick how many colours to show (1–16)">
+      <label for="countSlider">Colours:</label>
+      <input id="countSlider" type="range" min="1" max="16" value="8" />
+      <output id="countValue">8</output>
+    </div>
+
+    <button id="downloadBtn" title="Export current palette as SVG">Download SVG</button>
+    <button id="normalizeBtn" title="Format all visible inputs to #RRGGBB">Normalize hex</button>
+
+    <label class="import-label" for="fileInput" title="Import an exported palette SVG">Import SVG</label>
+    <input id="fileInput" type="file" accept="image/svg+xml,.svg" />
+
+    <button id="togglePicker" class="picker-btn" title="Show/hide the built-in color picker">🎨 Color Picker</button>
+    <button id="resetBtn" class="btn-secondary" title="Clear saved palette and reset">Reset</button>
+
+    <span class="hint">Saved automatically to this browser. Live contrast vs <b>black</b> and <b>white</b> (≥
+      4.5:1).</span>
+  </div>
+
+  <!-- Swatches row (dynamically rendered) -->
+  <div class="row" id="row" role="group" aria-label="Color swatches"></div>
+
+  <!-- Picker panel -->
+  <div class="picker-panel" id="pickerPanel" hidden>
+    <div class="picker">
+      <div>
+        <div id="sv" class="sv" aria-label="Saturation/Value area">
+          <div id="svHandle" class="sv-handle" style="left:0px; top:0px;"></div>
+        </div>
+        <div id="hue" class="hue" aria-label="Hue slider" style="margin-top:10px;">
+          <div id="hueHandle" class="hue-handle" style="left:0px;"></div>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div class="preview" id="preview"></div>
+        <input id="pickerHex" class="picker-hex" placeholder="#RRGGBB" />
+        <div class="quick-row" id="quickRow" title="Quick colours"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dropzone" id="dropzone">💡 Tip: drag &amp; drop an exported SVG here to restore the theme and palette.
+  </div>
+  <div class="summary" id="summary">Contrast summary: —</div>
+
+  <script>
+    // ========= Helpers =========
+    const HEX3 = /^#?[0-9a-fA-F]{3}$/; const HEX6 = /^#?[0-9a-fA-F]{6}$/;
+    const clampHex = s => s.replace(/[^0-9a-f]/gi, '').slice(0, 6).toUpperCase();
+    function toFullHex(raw) { if (!raw) return null; let h = clampHex(raw.startsWith('#') ? raw.slice(1) : raw); if (h.length === 3) h = h.split('').map(c => c + c).join(''); if (h.length !== 6) return null; return '#' + h; }
+    function toPreviewableHex(raw) { const s = (raw || '').trim(); if (HEX6.test(s)) return toFullHex(s); if (HEX3.test(s)) return toFullHex(s); return null; }
+
+    function hexToRgb(hex) { const h = hex.slice(1); return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16) }; }
+    function rgbToHex(r, g, b) { const to2 = v => v.toString(16).padStart(2, '0').toUpperCase(); return '#' + to2(r) + to2(g) + to2(b); }
+    function srgbToLinear(c) { const s = c / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); }
+    function relLuminance(hex) { const { r, g, b } = hexToRgb(hex); const R = srgbToLinear(r), G = srgbToLinear(g), B = srgbToLinear(b); return 0.2126 * R + 0.7152 * G + 0.0722 * B; }
+    function contrastRatio(fgHex, bgHex) { const L1 = relLuminance(fgHex), L2 = relLuminance(bgHex); const lighter = Math.max(L1, L2), darker = Math.min(L1, L2); return (lighter + 0.05) / (darker + 0.05); }
+    function autoTextOn(hexBg) { const { r, g, b } = hexToRgb(hexBg); const yiq = (r * 299 + g * 587 + b * 114) / 1000; return yiq >= 150 ? '#111111' : '#FFFFFF'; }
+
+    // HSV helpers
+    function rgbToHsv(r, g, b) {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h = 0, s = max === 0 ? 0 : (max - min) / max, v = max;
+      if (max !== min) {
+        switch (max) {
+          case r: h = (g - b) / (max - min) + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / (max - min) + 2; break;
+          case b: h = (r - g) / (max - min) + 4; break;
+        }
+        h *= 60;
+      }
+      return { h, s, v };
+    }
+    function hsvToRgb(h, s, v) {
+      const c = v * s; const x = c * (1 - Math.abs((h / 60) % 2 - 1)); const m = v - c;
+      let rp = 0, gp = 0, bp = 0;
+      if (0 <= h && h < 60) { rp = c; gp = x; bp = 0; }
+      else if (60 <= h && h < 120) { rp = x; gp = c; bp = 0; }
+      else if (120 <= h && h < 180) { rp = 0; gp = c; bp = x; }
+      else if (180 <= h && h < 240) { rp = 0; gp = x; bp = c; }
+      else if (240 <= h && h < 300) { rp = x; gp = 0; bp = c; }
+      else { rp = c; gp = 0; bp = x; }
+      const r = Math.round((rp + m) * 255), g = Math.round((gp + m) * 255), b = Math.round((bp + m) * 255);
+      return { r, g, b };
+    }
+    function hsvToHex(h, s, v) { const { r, g, b } = hsvToRgb(h, s, v); return rgbToHex(r, g, b); }
+    function hexToHsv(hex) { const { r, g, b } = hexToRgb(hex); return rgbToHsv(r, g, b); }
+
+    // Filename sanitiser
+    function sanitizeNameForFile(name) {
+      const s = (name || '').trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^A-Za-z0-9._-]/g, '')
+        .replace(/[-_.]{2,}/g, '-')
+        .replace(/^[-_.]+|[-_.]+$/g, '')
+        .slice(0, 64);
+      return s || 'palette';
+    }
+
+    // ========= State & Persistence =========
+    const DEFAULTS = [
+      '#FF6B6B', '#F7C948', '#4ECDC4', '#556CD6', '#2E3A59', '#1B998B', '#E76F51', '#264653',
+      '#8E44AD', '#27AE60', '#D35400', '#3498DB', '#E84393', '#16A085', '#C0392B', '#7F8C8D'
+    ];
+    const STORAGE_KEY = 'colour-palette.v1';
+
+    const state = { count: 8, name: '', colors: DEFAULTS.slice(0, 16), active: 0 };
+
+    function saveState() {
+      try {
+        const colors = Array.from({ length: state.count }, (_, i) => toFullHex(state.colors[i]) || DEFAULTS[i]);
+        const payload = { count: state.count, name: state.name || '', colors };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch { }
+    }
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if (!data || !Array.isArray(data.colors) || !data.colors.length) return null;
+        return {
+          count: Math.max(1, Math.min(16, parseInt(data.count || 8, 10))),
+          name: (data.name || '').toString(),
+          colors: data.colors.map(toFullHex).filter(Boolean).slice(0, 16)
+        };
+      } catch { return null; }
+    }
+    function resetState() {
+      localStorage.removeItem(STORAGE_KEY);
+      state.count = 8; state.name = ''; state.colors = DEFAULTS.slice(0, 16); state.active = 0;
+      themeNameEl.value = '';
+      setCount(state.count); // re-render
+      setActive(0);
+    }
+
+    // ========= DOM refs =========
+    const rowEl = document.getElementById('row');
+    const countSlider = document.getElementById('countSlider');
+    const countValue = document.getElementById('countValue');
+    const normalizeBtn = document.getElementById('normalizeBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const fileInput = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+    const summaryEl = document.getElementById('summary');
+    const themeNameEl = document.getElementById('themeName');
+    const resetBtn = document.getElementById('resetBtn');
+
+    const pickerPanel = document.getElementById('pickerPanel');
+    const togglePickerBtn = document.getElementById('togglePicker');
+    const svEl = document.getElementById('sv');
+    const svHandle = document.getElementById('svHandle');
+    const hueEl = document.getElementById('hue');
+    const hueHandle = document.getElementById('hueHandle');
+    const previewEl = document.getElementById('preview');
+    const pickerHexEl = document.getElementById('pickerHex');
+    const quickRow = document.getElementById('quickRow');
+
+    let wraps = [], inputs = [], badgesWraps = [];
+    let ph = 0, ps = 1, pv = 1; // picker HSV
+
+    // ========= Rendering =========
+    function swatchHTML(i, value) {
+      const vAttr = value ? ` value="${value}"` : '';
+      const activeCls = (i === state.active) ? ' active' : '';
+      return `
+        <div class="swatch-wrap${activeCls}" data-index="${i}">
+          <input class="swatch-input" aria-label="Color ${i + 1}" placeholder="#RRGGBB"${vAttr} data-index="${i}" />
+          <div class="badges" aria-live="polite">
+            <span class="badge badge-black">Black — —</span>
+            <span class="badge badge-white">White — —</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSwatches(n) {
+      let html = '';
+      for (let i = 0; i < n; i++) {
+        const val = toFullHex(state.colors[i]) || '';
+        html += swatchHTML(i, val);
+      }
+      rowEl.innerHTML = html;
+
+      wraps = Array.from(document.querySelectorAll('.swatch-wrap'));
+      inputs = wraps.map(w => w.querySelector('.swatch-input'));
+      badgesWraps = wraps.map(w => w.querySelector('.badges'));
+
+      inputs.forEach((inp, idx) => {
+        const bWrap = badgesWraps[idx];
+        applyPreview(inp, bWrap);
+        inp.addEventListener('input', () => { applyPreview(inp, bWrap); saveState(); });
+        inp.addEventListener('blur', () => { normalizeInput(inp, bWrap); saveState(); });
+        inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
+        // select active on click/focus
+        inp.addEventListener('focus', () => setActive(idx));
+        inp.addEventListener('click', () => setActive(idx));
+      });
+
+      updateSummary();
+    }
+
+    function setActive(i) {
+      i = Math.max(0, Math.min(state.count - 1, i));
+      state.active = i;
+      wraps.forEach((w, idx) => w.classList.toggle('active', idx === i));
+      const hex = toFullHex(inputs[i].value || state.colors[i]);
+      if (hex) pickerSetHex(hex);
+    }
+
+    // ========= Contrast badges + preview =========
+    function updateBadges(hex, badgesWrap) {
+      const badges = badgesWrap ? badgesWrap.querySelectorAll('.badge') : null;
+      const badgeBlack = badges && badges[0];
+      const badgeWhite = badges && badges[1];
+      if (!badgeBlack || !badgeWhite) return;
+
+      if (!hex) {
+        badgeBlack.textContent = 'Black — —';
+        badgeWhite.textContent = 'White — —';
+        badgeBlack.classList.remove('pass', 'fail');
+        badgeWhite.classList.remove('pass', 'fail');
+        return;
+      }
+
+      const rB = contrastRatio('#000000', hex);
+      const rW = contrastRatio('#FFFFFF', hex);
+      const passB = rB >= 4.5, passW = rW >= 4.5;
+
+      badgeBlack.textContent = `Black ${passB ? 'PASS' : 'FAIL'} ${rB.toFixed(2)}:1`;
+      badgeWhite.textContent = `White ${passW ? 'PASS' : 'FAIL'} ${rW.toFixed(2)}:1`;
+      badgeBlack.classList.toggle('pass', passB);
+      badgeBlack.classList.toggle('fail', !passB);
+      badgeWhite.classList.toggle('pass', passW);
+      badgeWhite.classList.toggle('fail', !passW);
+    }
+
+    function applyPreview(input, badgesWrap) {
+      const idx = +input.dataset.index;
+      const hex = toPreviewableHex(input.value || '');
+
+      if (hex) {
+        input.classList.remove('invalid');
+        input.style.background = hex;
+        input.style.color = autoTextOn(hex);
+        updateBadges(hex, badgesWrap);
+        state.colors[idx] = toFullHex(hex);
+        if (idx === state.active) pickerPreview(hex);
+      } else {
+        input.classList.add('invalid');
+        input.style.background = '#fff';
+        input.style.color = '#111';
+        updateBadges(null, badgesWrap);
+      }
+      updateSummary();
+    }
+
+    function normalizeInput(input, badgesWrap) {
+      const full = toFullHex(input.value || '');
+      if (full) {
+        input.value = full;
+        applyPreview(input, badgesWrap);
+      } else {
+        input.classList.add('invalid');
+      }
+    }
+
+    function updateSummary() {
+      let passB = 0, failB = 0, passW = 0, failW = 0;
+      inputs.forEach(inp => {
+        const hex = toFullHex(inp.value || '');
+        if (!hex) return;
+        const rB = contrastRatio('#000000', hex);
+        const rW = contrastRatio('#FFFFFF', hex);
+        if (rB >= 4.5) passB++; else failB++;
+        if (rW >= 4.5) passW++; else failW++;
+      });
+      if (passB + failB + passW + failW === 0) summaryEl.textContent = 'Contrast summary: —';
+      else summaryEl.textContent = `Contrast summary — Black: ${passB} PASS, ${failB} FAIL · White: ${passW} PASS, ${failW} FAIL (≥ 4.5:1)`;
+    }
+
+    // ========= Slider (1–16), Theme name =========
+    function setCount(n) {
+      state.count = n;
+      countSlider.value = String(n);
+      countValue.textContent = String(n);
+      renderSwatches(n);
+      setActive(Math.min(state.active, n - 1));
+      saveState();
+    }
+    countSlider.addEventListener('input', (e) => {
+      const n = Math.max(1, Math.min(16, parseInt(e.target.value || '8', 10)));
+      setCount(n);
+    });
+
+    themeNameEl.addEventListener('input', () => {
+      state.name = themeNameEl.value;
+      saveState();
+    });
+
+    // ========= Normalize current =========
+    normalizeBtn.addEventListener('click', () => {
+      inputs.forEach((inp, i) => { normalizeInput(inp, badgesWraps[i]); });
+      saveState();
+    });
+
+    // ========= Export SVG (only colours shown; includes theme name) =========
+    downloadBtn.addEventListener('click', () => {
+      const colors = inputs.map(i => toFullHex(i.value || ''));
+      const firstInvalid = colors.findIndex(c => !c);
+      if (firstInvalid !== -1) {
+        inputs[firstInvalid].classList.add('invalid');
+        inputs[firstInvalid].focus();
+        alert('Please fix invalid hex values (use #RRGGBB or #RGB).');
+        return;
+      }
+
+      const themeName = (state.name || '').trim();
+      const safeTitle = themeName || 'Color Palette';
+      const fileBase = sanitizeNameForFile(themeName) || 'palette';
+
+      const count = colors.length;
+      const sw = 120, sh = 110, gap = 16, pad = 20;
+      const width = pad * 2 + count * sw + (count - 1) * gap;
+      const height = pad * 2 + sh;
+
+      let nodes = '';
+      colors.forEach((hex, i) => {
+        const x = pad + i * (sw + gap);
+        const y = pad;
+        const txtColor = autoTextOn(hex);
+        const rBlack = contrastRatio('#000000', hex).toFixed(2);
+        const rWhite = contrastRatio('#FFFFFF', hex).toFixed(2);
+        const passB = parseFloat(rBlack) >= 4.5;
+        const passW = parseFloat(rWhite) >= 4.5;
+
+        nodes += `
+          <g data-index="${i}">
+            <rect x="${x}" y="${y}" width="${sw}" height="${sh}" rx="10"
+              fill="${hex}" stroke="rgba(0,0,0,0.15)"
+              data-role="swatch" data-hex="${hex}"/>
+            <text x="${x + sw / 2}" y="${y + sh / 2 + 5}" text-anchor="middle"
+              font-family="monospace" font-size="16" fill="${txtColor}"
+              data-role="label">${hex}</text>
+            <title>Swatch ${i + 1}: ${hex} — Contrast vs Black ${rBlack}:1 (${passB ? 'PASS' : 'FAIL'}), vs White ${rWhite}:1 (${passW ? 'PASS' : 'FAIL'})</title>
+          </g>`;
+      });
+
+      const meta = { app: 'm365-copilot-palette', version: 5, name: themeName, count, colors };
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${safeTitle}">
+  <title>${safeTitle}</title>
+  <desc>Theme: ${safeTitle}. Palette exported with ${count} swatch(es). Metadata included for re-import.</desc>
+  <metadata id="palette-meta">${JSON.stringify(meta)}</metadata>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  ${nodes}
+</svg>`;
+
+      const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = fileBase + '.svg';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    // ========= Import SVG (file + drag/drop) =========
+    function setPaletteFromArray(arr) {
+      for (let i = 0; i < Math.min(arr.length, 16); i++) {
+        const h = toFullHex(arr[i]); if (h) state.colors[i] = h;
+      }
+    }
+
+    function parseSvgPalette(text) {
+      try {
+        const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+        if (!doc || !doc.documentElement || doc.getElementsByTagName('parsererror').length) return null;
+
+        // Preferred: metadata
+        const metaEl = doc.querySelector('metadata#palette-meta');
+        if (metaEl && metaEl.textContent) {
+          try {
+            const meta = JSON.parse(metaEl.textContent.trim());
+            if (meta && Array.isArray(meta.colors)) {
+              return { colors: meta.colors.map(toFullHex).filter(Boolean), name: (meta.name || '').trim() };
+            }
+          } catch { }
+        }
+
+        // Fallbacks: colours only
+        const marked = Array.from(doc.querySelectorAll('rect[data-role="swatch"]'));
+        if (marked.length) {
+          const arr = marked.map(r => r.getAttribute('data-hex') || r.getAttribute('fill') || '').map(toFullHex).filter(Boolean);
+          if (arr.length) {
+            const t = (doc.querySelector('svg > title')?.textContent || '').trim();
+            return { colors: arr, name: t };
+          }
+        }
+
+        const rects = Array.from(doc.querySelectorAll('rect[fill]'));
+        const rectColors = rects.map(r => (r.getAttribute('fill') || '').trim()).map(toFullHex).filter(c => c && c !== '#FFFFFF');
+        if (rectColors.length) {
+          const seen = new Set(); const uniq = rectColors.filter(c => (seen.has(c) ? false : (seen.add(c), true)));
+          const t = (doc.querySelector('svg > title')?.textContent || '').trim();
+          return { colors: uniq, name: t };
+        }
+
+        const texts = Array.from(doc.querySelectorAll('text'));
+        const fromText = [];
+        texts.forEach(t => {
+          const s = (t.textContent || ''); const m = s.match(/#[0-9A-Fa-f]{6}\b/g); if (m) fromText.push(...m);
+        });
+        if (fromText.length) {
+          const seen = new Set(); const uniq = fromText.map(toFullHex).filter(Boolean).filter(c => (seen.has(c) ? false : (seen.add(c), true)));
+          const t = (doc.querySelector('svg > title')?.textContent || '').trim();
+          return { colors: uniq, name: t };
+        }
+
+        return null;
+      } catch { return null; }
+    }
+
+    async function handleSvgImport(file) {
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const parsed = parseSvgPalette(text);
+        if (parsed && parsed.colors && parsed.colors.length) {
+          const colors = parsed.colors;
+          const n = Math.max(1, Math.min(16, colors.length));
+          setPaletteFromArray(colors);
+          setCount(n); // updates slider and re-renders
+          if (typeof parsed.name === 'string' && parsed.name.trim().length) {
+            state.name = parsed.name.trim();
+            themeNameEl.value = state.name;
+          } else {
+            themeNameEl.value = '';
+            state.name = '';
+          }
+          saveState();
+        } else {
+          alert('Could not find a palette in this SVG. Make sure it was exported by this tool.');
+        }
+      } catch {
+        alert('Failed to read the SVG file.');
+      }
+    }
+
+    // File input
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      handleSvgImport(file);
+      fileInput.value = '';
+    });
+
+    // Drag & drop
+    ['dragenter', 'dragover'].forEach(ev => dropzone.addEventListener(ev, (e) => {
+      e.preventDefault(); e.stopPropagation(); dropzone.classList.add('dragover');
+    }));
+    ['dragleave', 'drop'].forEach(ev => dropzone.addEventListener(ev, (e) => {
+      e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('dragover');
+    }));
+    dropzone.addEventListener('drop', (e) => {
+      const file = e.dataTransfer?.files?.[0];
+      if (file && (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg'))) {
+        handleSvgImport(file);
+      } else {
+        alert('Please drop an SVG file (exported by this tool for best results).');
+      }
+    });
+
+    // ========= Simple Color Picker Logic =========
+    function pickerPreview(hex) {
+      previewEl.style.background = hex;
+      pickerHexEl.value = toFullHex(hex) || '';
+    }
+    function pickerSetHue(h) {
+      ph = (h + 360) % 360;
+      const base = hsvToHex(ph, 1, 1);
+      svEl.style.background = base;
+      const rect = hueEl.getBoundingClientRect();
+      const x = (ph / 360) * rect.width;
+      hueHandle.style.left = x + 'px';
+      const hex = hsvToHex(ph, ps, pv);
+      pickerPreview(hex);
+      applyColorToActive(hex);
+      positionSvHandle();
+    }
+    function pickerSetSV(s, v) {
+      ps = Math.max(0, Math.min(1, s));
+      pv = Math.max(0, Math.min(1, v));
+      const hex = hsvToHex(ph, ps, pv);
+      pickerPreview(hex);
+      applyColorToActive(hex);
+      positionSvHandle();
+    }
+    function positionSvHandle() {
+      const rect = svEl.getBoundingClientRect();
+      svHandle.style.left = (ps * rect.width) + 'px';
+      svHandle.style.top = ((1 - pv) * rect.height) + 'px';
+    }
+    function applyColorToActive(hex) {
+      const idx = state.active;
+      const inp = inputs[idx];
+      if (!inp) return;
+      inp.value = toFullHex(hex);
+      applyPreview(inp, badgesWraps[idx]);
+      saveState();
+    }
+    function pickerSetHex(hex) {
+      const full = toFullHex(hex);
+      if (!full) return;
+      pickerPreview(full);
+      const { h, s, v } = hexToHsv(full);
+      ph = h; ps = s; pv = v;
+      const base = hsvToHex(ph, 1, 1);
+      svEl.style.background = base;
+      const hueRect = hueEl.getBoundingClientRect();
+      hueHandle.style.left = (h / 360) * hueRect.width + 'px';
+      positionSvHandle();
+    }
+    function svEventToSV(e) {
+      const rect = svEl.getBoundingClientRect();
+      const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+      const x = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+      const y = clamp((e.clientY - rect.top) / rect.height, 0, 1);
+      return { s: x, v: 1 - y };
+    }
+    function startSvDrag(e) {
+      e.preventDefault();
+      const move = (ev) => { const { s, v } = svEventToSV(ev); pickerSetSV(s, v); };
+      const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+      window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+      const { s, v } = svEventToSV(e); pickerSetSV(s, v);
+    }
+    svEl.addEventListener('mousedown', startSvDrag);
+    function hueEventToH(e) {
+      const rect = hueEl.getBoundingClientRect();
+      const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      return (x / rect.width) * 360;
+    }
+    function startHueDrag(e) {
+      e.preventDefault();
+      const move = (ev) => { pickerSetHue(hueEventToH(ev)); };
+      const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+      window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+      pickerSetHue(hueEventToH(e));
+    }
+    hueEl.addEventListener('mousedown', startHueDrag);
+    pickerHexEl.addEventListener('input', () => {
+      const full = toPreviewableHex(pickerHexEl.value || '');
+      if (full) { pickerSetHex(full); applyColorToActive(full); }
+    });
+    const QUICK = ['#FF0000', '#FFA500', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#000000', '#FFFFFF', '#808080', '#8B4513', '#800080'];
+    quickRow.innerHTML = QUICK.map(c => `<div class="chip" data-hex="${c}" style="background:${c}"></div>`).join('');
+    quickRow.addEventListener('click', (e) => {
+      const hex = e.target?.getAttribute?.('data-hex');
+      if (!hex) return;
+      pickerSetHex(hex);
+      applyColorToActive(hex);
+    });
+    togglePickerBtn.addEventListener('click', () => {
+      const show = pickerPanel.hasAttribute('hidden');
+      if (show) {
+        pickerPanel.removeAttribute('hidden');
+        togglePickerBtn.classList.add('active');
+        const hex = toFullHex(inputs[state.active]?.value || state.colors[state.active]);
+        if (hex) pickerSetHex(hex);
+      } else {
+        pickerPanel.setAttribute('hidden', '');
+        togglePickerBtn.classList.remove('active');
+      }
+    });
+
+    // ========= Reset =========
+    resetBtn.addEventListener('click', resetState);
+
+    // ========= Init: restore from localStorage if present =========
+    const stored = loadState();
+    if (stored) {
+      state.count = stored.count;
+      state.name = stored.name || '';
+      // merge stored colors into state (up to 16)
+      for (let i = 0; i < Math.min(stored.colors.length, 16); i++) {
+        const h = toFullHex(stored.colors[i]); if (h) state.colors[i] = h;
+      }
+      themeNameEl.value = state.name;
+    }
+    setCount(state.count);   // render swatches
+    setActive(0);            // select first
+  </script>
+</body>
+
+</html>
