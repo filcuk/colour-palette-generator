@@ -213,6 +213,29 @@
       min-height: 40px;
     }
 
+    .json-preview-label {
+      display: block;
+      font-size: 0.9em;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .json-preview {
+      margin: 0;
+      padding: 12px 14px;
+      font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      background: var(--bg-sub);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 8px;
+      overflow: auto;
+      max-height: 280px;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
     .btn-secondary {
       background: #fff;
       color: #111;
@@ -693,11 +716,23 @@
 
   <section class="page-section" aria-labelledby="section-download">
     <h2 id="section-download">Export & Import</h2>
-    <div class="tip dropzone" id="dropzone">💡 Tip: drag &amp; drop an exported SVG here to restore the theme and palette.</div>
-    <div class="actions" style="margin-top:10px;">
-      <button id="downloadBtn" class="btn-action" type="button" title="Export current palette as SVG">Export SVG</button>
-      <button id="importBtn" class="btn-action" type="button" title="Import an exported palette SVG">Import SVG</button>
-      <input id="fileInput" type="file" accept="image/svg+xml,.svg" />
+    <div class="colour-block">
+      <h3 class="colour-block-title">SVG</h3>
+      <div class="tip dropzone" id="dropzone">💡 Tip: drag &amp; drop an SVG or JSON file here to restore the theme and palette.</div>
+      <div class="actions" style="margin-top:10px;">
+        <button id="downloadBtn" class="btn-action" type="button" title="Export current palette as SVG">Export SVG</button>
+        <button id="importBtn" class="btn-action" type="button" title="Import an exported palette SVG">Import SVG</button>
+        <input id="fileInput" type="file" accept="image/svg+xml,.svg" />
+      </div>
+    </div>
+    <div class="colour-block">
+      <h3 id="json-preview-heading" class="colour-block-title">Theme (JSON)</h3>
+      <pre id="jsonPreview" class="json-preview" aria-live="polite" aria-labelledby="json-preview-heading"></pre>
+      <div class="actions" style="margin-top:8px;">
+        <button id="exportJsonBtn" class="btn-action" type="button" title="Download current theme as JSON">Export JSON</button>
+        <button id="importJsonBtn" class="btn-action" type="button" title="Import a theme from JSON file">Import JSON</button>
+        <input id="jsonFileInput" type="file" accept=".json,application/json" style="display:none" />
+      </div>
     </div>
   </section>
 
@@ -914,7 +949,11 @@
     const downloadBtn = document.getElementById('downloadBtn');
     const importBtn = document.getElementById('importBtn');
     const fileInput = document.getElementById('fileInput');
+    const jsonFileInput = document.getElementById('jsonFileInput');
     const dropzone = document.getElementById('dropzone');
+    const jsonPreviewEl = document.getElementById('jsonPreview');
+    const exportJsonBtn = document.getElementById('exportJsonBtn');
+    const importJsonBtn = document.getElementById('importJsonBtn');
     const summaryEl = document.getElementById('summary');
     const themeNameEl = document.getElementById('themeName');
     const resetBtn = document.getElementById('resetBtn');
@@ -1189,6 +1228,7 @@
       renderSwatches(n);
       if (state.activeSection === 'theme') setActive('theme', Math.min(state.activeIndex, n - 1));
       saveState();
+      updateJsonPreview();
     }
     countSlider.addEventListener('input', (e) => {
       const n = Math.max(1, Math.min(16, parseInt(e.target.value || '8', 10)));
@@ -1227,6 +1267,107 @@
         inputs.forEach((inp, i) => { normalizeInput(inp, badgesWraps[i]); });
         saveState();
       });
+    }
+
+    // ========= Theme JSON preview (Export & Import section) =========
+    function buildThemeJsonPayload() {
+      const dataColors = [];
+      for (let i = 0; i < state.count; i++) {
+        const hex = toFullHex(state.colors[i]) || toFullHex(DEFAULTS[i]) || '#000000';
+        dataColors.push(hex);
+      }
+      const payload = {
+        name: (state.name || '').trim() || 'Custom',
+        dataColors
+      };
+      if (state.sentimentEnabled) {
+        const sentiment = (state.sentimentColors || DEFAULTS_SENTIMENT).slice(0, 3).map((c, i) => toFullHex(c) || toFullHex(DEFAULTS_SENTIMENT[i]) || '#000000');
+        payload.good = sentiment[0];
+        payload.center = sentiment[1];
+        payload.bad = sentiment[2];
+      }
+      if (state.divergentEnabled) {
+        const divergent = (state.divergentColors || DEFAULTS_DIVERGENT).slice(0, 3).map((c, i) => toFullHex(c) || toFullHex(DEFAULTS_DIVERGENT[i]) || '#000000');
+        payload.neutral = divergent[0];
+        payload.minimum = divergent[1];
+        payload.maximum = divergent[2];
+      }
+      return payload;
+    }
+    function updateJsonPreview() {
+      if (!jsonPreviewEl) return;
+      try {
+        const payload = buildThemeJsonPayload();
+        jsonPreviewEl.textContent = JSON.stringify(payload, null, 4);
+      } catch {
+        jsonPreviewEl.textContent = '';
+      }
+    }
+
+    async function handleJsonImport(file) {
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!data || !Array.isArray(data.dataColors) || !data.dataColors.length) {
+          alert('Invalid theme JSON: expected an object with a "dataColors" array.');
+          return;
+        }
+        const colors = data.dataColors.map(c => toFullHex(c)).filter(Boolean);
+        if (!colors.length) {
+          alert('No valid hex colours found in dataColors.');
+          return;
+        }
+        const n = Math.max(1, Math.min(16, colors.length));
+        setPaletteFromArray(colors);
+        setCount(n);
+        state.name = (typeof data.name === 'string' && data.name.trim()) ? data.name.trim() : '';
+        themeNameEl.value = state.name;
+
+        const hasSentiment = data.good != null && data.center != null && data.bad != null;
+        if (hasSentiment) {
+          state.sentimentEnabled = true;
+          const g = toFullHex(data.good), c = toFullHex(data.center), b = toFullHex(data.bad);
+          state.sentimentColors = [g || DEFAULTS_SENTIMENT[0], c || DEFAULTS_SENTIMENT[1], b || DEFAULTS_SENTIMENT[2]];
+        } else {
+          state.sentimentEnabled = false;
+        }
+        const hasDivergent = data.neutral != null && data.minimum != null && data.maximum != null;
+        if (hasDivergent) {
+          state.divergentEnabled = true;
+          const n0 = toFullHex(data.neutral), n1 = toFullHex(data.minimum), n2 = toFullHex(data.maximum);
+          state.divergentColors = [n0 || DEFAULTS_DIVERGENT[0], n1 || DEFAULTS_DIVERGENT[1], n2 || DEFAULTS_DIVERGENT[2]];
+        } else {
+          state.divergentEnabled = false;
+        }
+        updateOptionalSectionsVisibility();
+        renderSentimentSwatches();
+        renderDivergentSwatches();
+        saveState();
+        updateThemeStatus();
+        updateJsonPreview();
+
+        const name = (state.name || '').trim();
+        if (name && themeComboList) {
+          const payload = buildCurrentThemePayload(name);
+          if (payload) {
+            const existingIndex = savedThemes.findIndex(t => t.name === name);
+            if (existingIndex === -1) {
+              savedThemes.push(payload);
+              saveSavedThemes(savedThemes);
+              refreshSavedThemesUI(name);
+            } else if (confirm(`A theme named "${name}" already exists. Overwrite with the imported palette?`)) {
+              savedThemes[existingIndex] = payload;
+              saveSavedThemes(savedThemes);
+              refreshSavedThemesUI(name);
+            }
+            themeDirty = false;
+            updateThemeStatus();
+          }
+        }
+      } catch (err) {
+        alert('Failed to read or parse the JSON file. ' + (err && err.message ? err.message : ''));
+      }
     }
 
     // ========= Export SVG (only colours shown; includes theme name) =========
@@ -1460,7 +1601,36 @@
       }
     }
 
-    // File input
+    // Export JSON
+    if (exportJsonBtn) {
+      exportJsonBtn.addEventListener('click', () => {
+        const payload = buildThemeJsonPayload();
+        const json = JSON.stringify(payload, null, 4);
+        const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (sanitizeNameForFile(state.name) || 'theme') + '.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      });
+    }
+
+    // Import JSON (file picker)
+    if (importJsonBtn && jsonFileInput) {
+      importJsonBtn.addEventListener('click', () => jsonFileInput.click());
+    }
+    if (jsonFileInput) {
+      jsonFileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        handleJsonImport(file);
+        jsonFileInput.value = '';
+      });
+    }
+
+    // File input (SVG)
     if (importBtn && fileInput) {
       importBtn.addEventListener('click', () => fileInput.click());
     }
@@ -1491,10 +1661,16 @@
       dragDepth = 0;
       dropzone.classList.remove('dragover', 'fullscreen');
       const file = e.dataTransfer?.files?.[0];
-      if (file && (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg'))) {
+      if (!file) return;
+      const name = (file.name || '').toLowerCase();
+      const isSvg = file.type === 'image/svg+xml' || name.endsWith('.svg');
+      const isJson = file.type === 'application/json' || name.endsWith('.json');
+      if (isSvg) {
         handleSvgImport(file);
+      } else if (isJson) {
+        handleJsonImport(file);
       } else {
-        alert('Please drop an SVG file (exported by this tool for best results).');
+        alert('Please drop an SVG or JSON file (exported by this tool for best results).');
       }
     });
 
@@ -1722,6 +1898,7 @@
         themeStatusIcon.textContent = '!';
         themeStatusLabel.textContent = 'Not saved';
       }
+      updateJsonPreview();
     }
 
     function refreshSavedThemesUI(selectedName) {
@@ -1919,6 +2096,7 @@
     savedThemes = loadSavedThemes();
     refreshSavedThemesUI('');
     updateThemeStatus();
+    updateJsonPreview();
 
     setCount(state.count);
     renderSentimentSwatches();
