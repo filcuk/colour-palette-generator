@@ -1883,7 +1883,9 @@
       const idx = state.activeIndex;
       if (arr && arr[idx] !== undefined) arr[idx] = toFullHex(hex);
       applyPreview(inp, getActiveBadgesWrap());
+      themeDirty = true;
       saveState();
+      updateThemeStatus();
     }
     function pickerSetHex(hex) {
       const full = toFullHex(hex);
@@ -2004,6 +2006,8 @@
         themeStatusIcon.textContent = '\u2014';
         themeStatusIcon.classList.remove('throbber', 'icon-check', 'icon-warning');
         themeStatusLabel.textContent = 'No theme selected';
+        updateJsonPreview();
+        updateSvgPreview();
         return;
       }
       const exists = savedThemes.some(t => t.name === name);
