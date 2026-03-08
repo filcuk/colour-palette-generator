@@ -656,7 +656,7 @@
 
   <section class="page-section" aria-labelledby="section-themes">
     <h2 id="section-themes">Themes</h2>
-    <p class="warning" style="margin-top:10px; margin-bottom:0;">⚠️ Themes are stored only in this browser. Clearing site data, using a different browser or device, or resetting the browser may remove them.</p>
+    <p class="warning" style="margin-top:10px; margin-bottom:0;">⚠️ Themes are stored in this browser. Clearing site data, using a different browser or device, or resetting the browser will remove all stored themes.</p>
     <div class="controls" style="margin-top:10px;">
       <div class="themes-manager" title="Name your theme or pick a saved one; used for export and stored in SVG">
         <div class="theme-combo">
@@ -678,6 +678,7 @@
 
   <section class="page-section" aria-labelledby="section-colours">
     <h2 id="section-colours">Colours</h2>
+    <p class="info" id="summary" style="margin-top:10px; margin-bottom:10px;">ℹ️ Contrast summary: —</p>
     <div class="colour-block">
       <h3 class="colour-block-title">Theme colours</h3>
       <div class="slider-wrap" title="Pick how many theme colours (1–16)">
@@ -705,7 +706,6 @@
         <div class="row row-fixed" id="rowDivergent" role="group" aria-label="Divergent color swatches"></div>
       </div>
     </div>
-    <p class="info" id="summary" style="margin-top:10px; margin-bottom:0;">ℹ️ Contrast summary: —</p>
     <div class="picker-panel" id="pickerPanel">
       <div class="picker">
         <div class="picker-col picker-col-inputs">
@@ -1244,7 +1244,7 @@
       else {
         const pctB = totalB ? Math.round((passB / totalB) * 100) : 0;
         const pctW = totalW ? Math.round((passW / totalW) * 100) : 0;
-        summaryEl.textContent = `ℹ️ Contrast ≥ 4.5:1 — Black ${pctB}% of ${totalB} · White ${pctW}% of ${totalW}`;
+        summaryEl.textContent = `ℹ️ Testing contrast ≥ 4.5:1 — Black ${pctB}% · White ${pctW}%.`;
       }
     }
 
