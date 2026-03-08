@@ -135,6 +135,13 @@
       display: none;
     }
 
+    .svg-option {
+      display: block;
+      margin: 0 0 8px 0;
+      cursor: pointer;
+    }
+    .svg-option input[type="checkbox"] { margin-right: 6px; }
+
     .swatch-wrap {
       display: inline-flex;
       flex-direction: column;
@@ -950,6 +957,10 @@
     <div class="callout-tip dropzone" id="dropzone">Drag &amp; drop an SVG or JSON file here to restore the theme and palette.</div>
     <div class="colour-block">
       <h3 class="colour-block-title">SVG</h3>
+      <label class="svg-option">
+        <input type="checkbox" id="svgHideColourLabels" />
+        <span>Hide colour labels</span>
+      </label>
       <div id="svgPreview" class="svg-preview preview-panel" aria-label="SVG export preview"></div>
       <div class="actions">
         <button id="downloadBtn" class="btn-action" type="button" title="Export current palette as SVG">Export SVG</button>
@@ -1076,6 +1087,7 @@
       divergentColors: DEFAULTS_DIVERGENT.slice(),
       sentimentEnabled: false,
       divergentEnabled: false,
+      svgHideColourLabels: false,
       activeSection: 'theme',
       activeIndex: 0
     };
@@ -1092,7 +1104,8 @@
           sentimentColors: sentiment.length === 3 ? sentiment : DEFAULTS_SENTIMENT.slice(),
           divergentColors: divergent.length === 3 ? divergent : DEFAULTS_DIVERGENT.slice(),
           sentimentEnabled: !!state.sentimentEnabled,
-          divergentEnabled: !!state.divergentEnabled
+          divergentEnabled: !!state.divergentEnabled,
+          svgHideColourLabels: !!state.svgHideColourLabels
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       } catch { }
@@ -1120,7 +1133,8 @@
           sentimentColors,
           divergentColors,
           sentimentEnabled: data.sentimentEnabled === true,
-          divergentEnabled: data.divergentEnabled === true
+          divergentEnabled: data.divergentEnabled === true,
+          svgHideColourLabels: data.svgHideColourLabels === true
         };
       } catch { return null; }
     }
@@ -1214,7 +1228,9 @@
         state.divergentColors = stored.divergentColors.slice();
       if (stored.sentimentEnabled !== undefined) state.sentimentEnabled = stored.sentimentEnabled === true;
       if (stored.divergentEnabled !== undefined) state.divergentEnabled = stored.divergentEnabled === true;
+      if (stored.svgHideColourLabels !== undefined) state.svgHideColourLabels = stored.svgHideColourLabels === true;
       if (themeNameEl) themeNameEl.value = state.name;
+      if (svgHideColourLabelsCb) svgHideColourLabelsCb.checked = !!state.svgHideColourLabels;
       setCount(state.count);
       renderSentimentSwatches();
       renderDivergentSwatches();
@@ -1259,9 +1275,11 @@
       state.divergentColors = DEFAULTS_DIVERGENT.slice();
       state.sentimentEnabled = false;
       state.divergentEnabled = false;
+      state.svgHideColourLabels = false;
       state.activeSection = 'theme';
       state.activeIndex = 0;
       themeNameEl.value = '';
+      if (svgHideColourLabelsCb) svgHideColourLabelsCb.checked = false;
       setCount(state.count);
       renderSentimentSwatches();
       renderDivergentSwatches();
@@ -1287,6 +1305,7 @@
     const fileInput = document.getElementById('fileInput');
     const jsonFileInput = document.getElementById('jsonFileInput');
     const dropzone = document.getElementById('dropzone');
+    const svgHideColourLabelsCb = document.getElementById('svgHideColourLabels');
     const svgPreviewEl = document.getElementById('svgPreview');
     const jsonPreviewEl = document.getElementById('jsonPreview');
     const jsonCopyBtn = document.getElementById('jsonCopyBtn');
@@ -1596,6 +1615,13 @@
         updateSvgPreview();
       });
     }
+    if (svgHideColourLabelsCb) {
+      svgHideColourLabelsCb.addEventListener('change', () => {
+        state.svgHideColourLabels = svgHideColourLabelsCb.checked;
+        updateSvgPreview();
+        saveState();
+      });
+    }
 
     themeNameEl.addEventListener('input', () => {
       state.name = themeNameEl.value;
@@ -1801,6 +1827,7 @@
         themeName,
         sentimentEnabled,
         divergentEnabled,
+        hideColourLabels = false,
         forPreview = false
       } = opts;
       const safeTitle = (themeName || '').trim() || 'Color Palette';
@@ -1837,14 +1864,15 @@
           const rWhite = contrastRatio('#FFFFFF', hex).toFixed(2);
           const passB = parseFloat(rBlack) >= 4.5;
           const passW = parseFloat(rWhite) >= 4.5;
+          const labelEl = hideColourLabels ? '' : `
+            <text x="${x + sw / 2}" y="${startY + sh / 2 + 5}" text-anchor="middle"
+              font-family="monospace" font-size="16" fill="${txtColor}"
+              data-role="label">${hex}</text>`;
           out += `
           <g data-index="${i}" data-role="${rolePrefix}">
             <rect x="${x}" y="${startY}" width="${sw}" height="${sh}" rx="10"
               fill="${hex}" stroke="rgba(0,0,0,0.15)"
-              data-role="swatch" data-hex="${hex}"/>
-            <text x="${x + sw / 2}" y="${startY + sh / 2 + 5}" text-anchor="middle"
-              font-family="monospace" font-size="16" fill="${txtColor}"
-              data-role="label">${hex}</text>
+              data-role="swatch" data-hex="${hex}"/>${labelEl}
             <title>Swatch ${i + 1}: ${hex} — Contrast vs Black ${rBlack}:1 (${passB ? 'PASS' : 'FAIL'}), vs White ${rWhite}:1 (${passW ? 'PASS' : 'FAIL'})</title>
           </g>`;
         });
@@ -1914,6 +1942,7 @@
           themeName: state.name,
           sentimentEnabled: state.sentimentEnabled,
           divergentEnabled: state.divergentEnabled,
+          hideColourLabels: !!state.svgHideColourLabels,
           forPreview: true
         });
         svgPreviewEl.innerHTML = svg;
@@ -1945,6 +1974,7 @@
         themeName: state.name,
         sentimentEnabled: state.sentimentEnabled,
         divergentEnabled: state.divergentEnabled,
+        hideColourLabels: !!state.svgHideColourLabels,
         forPreview: false
       });
       const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
