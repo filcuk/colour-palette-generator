@@ -17,13 +17,16 @@
       --bad: #c83532;
       --ink: #111;
       --accent: #0078d4;
-      /* Callouts: info boxes on the page */
+      /* Callouts: info boxes on the page (text = dark version of bg hue) */
       --callout-tip-bg: #fefce8;
       --callout-tip-border: #caad00;
+      --callout-tip-text: #4a4500;
       --callout-warning-bg: #fff4e0;
       --callout-warning-border: #c77a00;
+      --callout-warning-text: #5a3300;
       --callout-info-bg: #e8f4fd;
       --callout-info-border: #0078d4;
+      --callout-info-text: #0a3560;
     }
 
     body {
@@ -385,19 +388,21 @@
       border-radius: 10px;
       padding: 10px 12px;
       font: 12px/1.2 var(--font);
-      color: #444;
     }
     .callout-tip {
       background: var(--callout-tip-bg);
       border-color: var(--callout-tip-border);
+      color: var(--callout-tip-text);
     }
     .callout-warning {
       background: var(--callout-warning-bg);
       border-color: var(--callout-warning-border);
+      color: var(--callout-warning-text);
     }
     .callout-info {
       background: var(--callout-info-bg);
       border-color: var(--callout-info-border);
+      color: var(--callout-info-text);
     }
 
     .dropzone.dragover {
