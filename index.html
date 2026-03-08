@@ -17,6 +17,13 @@
       --bad: #c83532;
       --ink: #111;
       --accent: #0078d4;
+      /* Callouts: light background + darker border */
+      --callout-tip-bg: #fefce8;
+      --callout-tip-border: #caad00;
+      --callout-warning-bg: #fff4e0;
+      --callout-warning-border: #c77a00;
+      --callout-info-bg: #e8f4fd;
+      --callout-info-border: #0078d4;
     }
 
     body {
@@ -159,12 +166,13 @@
       z-index: 9999;
       padding: 6px 10px;
       font: 12px/1.3 var(--font);
-      color: #fff;
-      background: #333;
+      color: var(--ink);
+      background: var(--callout-info-bg);
+      border: 1px solid var(--callout-info-border);
       border-radius: 6px;
       white-space: pre-line;
       pointer-events: none;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       opacity: 0;
       visibility: hidden;
       transition: none;
@@ -328,14 +336,27 @@
       text-decoration: underline;
     }
 
-    .tip {
+    .tip,
+    .warning,
+    .info {
       margin-top: 10px;
-      border: 2px dashed rgba(0, 0, 0, .2);
+      border: 1px solid;
       border-radius: 10px;
       padding: 10px 12px;
       font: 12px/1.2 var(--font);
       color: #444;
-      background: #fff
+    }
+    .tip {
+      background: var(--callout-tip-bg);
+      border-color: var(--callout-tip-border);
+    }
+    .warning {
+      background: var(--callout-warning-bg);
+      border-color: var(--callout-warning-border);
+    }
+    .info {
+      background: var(--callout-info-bg);
+      border-color: var(--callout-info-border);
     }
 
     .dropzone.dragover {
@@ -635,7 +656,7 @@
 
   <section class="page-section" aria-labelledby="section-themes">
     <h2 id="section-themes">Themes</h2>
-    <p class="tip" style="margin-top:10px; margin-bottom:0;">⚠️ Themes are stored only in this browser. Clearing site data, using a different browser or device, or resetting the browser may remove them.</p>
+    <p class="warning" style="margin-top:10px; margin-bottom:0;">⚠️ Themes are stored only in this browser. Clearing site data, using a different browser or device, or resetting the browser may remove them.</p>
     <div class="controls" style="margin-top:10px;">
       <div class="themes-manager" title="Name your theme or pick a saved one; used for export and stored in SVG">
         <div class="theme-combo">
@@ -684,7 +705,7 @@
         <div class="row row-fixed" id="rowDivergent" role="group" aria-label="Divergent color swatches"></div>
       </div>
     </div>
-    <p class="tip" id="summary" style="margin-top:10px; margin-bottom:0;">ℹ️ Contrast summary: —</p>
+    <p class="info" id="summary" style="margin-top:10px; margin-bottom:0;">ℹ️ Contrast summary: —</p>
     <div class="picker-panel" id="pickerPanel">
       <div class="picker">
         <div class="picker-col picker-col-inputs">
