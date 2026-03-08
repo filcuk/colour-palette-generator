@@ -1,12 +1,11 @@
-
-
 # <img src="res/logo.png" width="32"> Colour Palette Generator
-> [!IMPORTANT]
-> This project is almost entirely vibe-coded.
 
-Site: [github.io/colour-palette-generator](https://filcuk.github.io/colour-palette-generator/)
+Link: [github.io/colour-palette-generator](https://filcuk.github.io/colour-palette-generator/)
 
 ![Preview](res/example1.png)
+
+> [!IMPORTANT]
+> This project is almost entirely vibe-coded.
 
 ## Features
 - **Single self-contained file**, all client-side
@@ -17,7 +16,10 @@ Site: [github.io/colour-palette-generator](https://filcuk.github.io/colour-palet
 - **Saving palettes** to browser
 - **Export with preview** to svg image, Power BI json theme file
 - **Import** any exported format to restore palette
-- **Share** themes simply by sharing the full URL
+- **Share** themes simply by forwarding the full URL
+
+> [!TIP]
+> Tested on Firefox. Please submit any issues or suggestions [here](https://github.com/filcuk/colour-palette-generator/issues).
 
 ## Credit
 Logo image: <a href="https://www.flaticon.com/free-icons/color-palette" title="color palette icons">Color palette icons created by Freepik - Flaticon</a>
