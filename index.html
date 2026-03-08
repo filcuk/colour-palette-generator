@@ -100,8 +100,31 @@
       cursor: pointer;
       margin: 0 0 6px 0;
     }
-    .colour-block-heading input[type="checkbox"] {
+    .colour-block-heading input[type="checkbox"].toggle-checkbox {
+      position: absolute;
+      width: 0;
+      height: 0;
+      opacity: 0;
       margin: 0;
+      pointer-events: none;
+    }
+    .colour-block-heading .toggle-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1em;
+      font-size: 0.75em;
+      color: #555;
+      flex-shrink: 0;
+      line-height: 0;
+      transform: translateY(-0.4em);
+    }
+    .colour-block-heading .toggle-icon::before {
+      content: "\25B6";
+      line-height: 1;
+    }
+    .colour-block-heading input:checked ~ .toggle-icon::before {
+      content: "\25BC";
     }
     .colour-block-title {
       margin: 0 0 8px 0;
@@ -855,7 +878,8 @@
     </div>
     <div class="colour-block" id="blockSentiment">
       <label class="colour-block-heading">
-        <input type="checkbox" id="sentimentEnabled" />
+        <input type="checkbox" id="sentimentEnabled" class="toggle-checkbox" aria-label="Toggle Sentiment colours" />
+        <span class="toggle-icon" aria-hidden="true"></span>
         <span class="colour-block-title">Sentiment colours</span>
       </label>
       <div class="optional-content" id="rowSentimentWrap">
@@ -864,7 +888,8 @@
     </div>
     <div class="colour-block" id="blockDivergent">
       <label class="colour-block-heading">
-        <input type="checkbox" id="divergentEnabled" />
+        <input type="checkbox" id="divergentEnabled" class="toggle-checkbox" aria-label="Toggle Divergent colours" />
+        <span class="toggle-icon" aria-hidden="true"></span>
         <span class="colour-block-title">Divergent colours</span>
       </label>
       <div class="optional-content" id="rowDivergentWrap">
