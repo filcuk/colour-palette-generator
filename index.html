@@ -1043,6 +1043,7 @@
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       } catch { }
+      updateHashFromState();
       if (!suppressAutoThemeSave) autoSaveThemeIfNamed();
     }
     function loadState() {
@@ -1069,6 +1070,106 @@
           divergentEnabled: data.divergentEnabled === true
         };
       } catch { return null; }
+    }
+
+    // URL fragment: share theme via full URL
+    function stateToHashPayload() {
+      const themeColors = Array.from({ length: state.count }, (_, i) => {
+        const h = toFullHex(state.colors[i]) || DEFAULTS[i];
+        return h ? h.slice(1) : '000000';
+      });
+      const payload = {
+        n: (state.name || '').trim(),
+        c: state.count,
+        d: themeColors
+      };
+      if (state.sentimentEnabled) {
+        payload.s = (state.sentimentColors || DEFAULTS_SENTIMENT).slice(0, 3).map(c => (toFullHex(c) || '').slice(1) || '000000');
+        payload.se = true;
+      }
+      if (state.divergentEnabled) {
+        payload.dv = (state.divergentColors || DEFAULTS_DIVERGENT).slice(0, 3).map(c => (toFullHex(c) || '').slice(1) || '000000');
+        payload.de = true;
+      }
+      return payload;
+    }
+    function hashPayloadToStoredShape(p) {
+      if (!p || !Array.isArray(p.d) || !p.d.length) return null;
+      const count = Math.max(1, Math.min(16, parseInt(p.c, 10) || 8));
+      const colors = p.d.slice(0, 16).map(x => typeof x === 'string' && x.length >= 6 ? '#' + x.replace(/^#/, '').slice(0, 6) : null).filter(Boolean);
+      if (!colors.length) return null;
+      const sentimentColors = Array.isArray(p.s) && p.s.length === 3
+        ? p.s.map(x => typeof x === 'string' && x.length >= 6 ? '#' + x.replace(/^#/, '').slice(0, 6) : null).filter(Boolean)
+        : DEFAULTS_SENTIMENT.slice();
+      const divergentColors = Array.isArray(p.dv) && p.dv.length === 3
+        ? p.dv.map(x => typeof x === 'string' && x.length >= 6 ? '#' + x.replace(/^#/, '').slice(0, 6) : null).filter(Boolean)
+        : DEFAULTS_DIVERGENT.slice();
+      return {
+        count,
+        name: (p.n != null ? String(p.n) : '').trim(),
+        colors: colors.length ? colors : [DEFAULTS[0]],
+        sentimentColors: sentimentColors.length === 3 ? sentimentColors : DEFAULTS_SENTIMENT.slice(),
+        divergentColors: divergentColors.length === 3 ? divergentColors : DEFAULTS_DIVERGENT.slice(),
+        sentimentEnabled: p.se === true,
+        divergentEnabled: p.de === true
+      };
+    }
+    function encodeHashPayload(payload) {
+      const json = JSON.stringify(payload);
+      const bytes = new TextEncoder().encode(json);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+    function decodeHashPayload(hashStr) {
+      try {
+        const base64 = (hashStr || '').replace(/^#/, '').replace(/-/g, '+').replace(/_/g, '/');
+        if (!base64) return null;
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return JSON.parse(new TextDecoder().decode(bytes));
+      } catch { return null; }
+    }
+    let hashUpdateTimer = null;
+    function updateHashFromState() {
+      if (hashUpdateTimer) clearTimeout(hashUpdateTimer);
+      hashUpdateTimer = setTimeout(() => {
+        hashUpdateTimer = null;
+        try {
+          const payload = stateToHashPayload();
+          const encoded = encodeHashPayload(payload);
+          const url = location.pathname + location.search + '#' + encoded;
+          if (location.hash !== '#' + encoded) history.replaceState(null, '', url);
+        } catch { }
+      }, 300);
+    }
+    function readStateFromHash() {
+      const decoded = decodeHashPayload(location.hash);
+      return decoded ? hashPayloadToStoredShape(decoded) : null;
+    }
+    function applyStoredState(stored) {
+      if (!stored) return;
+      state.count = stored.count;
+      state.name = stored.name || '';
+      for (let i = 0; i < Math.min(stored.colors.length, 16); i++) {
+        const h = toFullHex(stored.colors[i]); if (h) state.colors[i] = h;
+      }
+      if (stored.sentimentColors && stored.sentimentColors.length === 3)
+        state.sentimentColors = stored.sentimentColors.slice();
+      if (stored.divergentColors && stored.divergentColors.length === 3)
+        state.divergentColors = stored.divergentColors.slice();
+      if (stored.sentimentEnabled !== undefined) state.sentimentEnabled = stored.sentimentEnabled === true;
+      if (stored.divergentEnabled !== undefined) state.divergentEnabled = stored.divergentEnabled === true;
+      if (themeNameEl) themeNameEl.value = state.name;
+      setCount(state.count);
+      renderSentimentSwatches();
+      renderDivergentSwatches();
+      updateOptionalSectionsVisibility();
+      setActive('theme', 0);
+      updateThemeStatus();
+      updateJsonPreview();
+      updateSvgPreview();
     }
 
     // Saved themes (multiple named palettes)
@@ -2524,22 +2625,18 @@
       resetState();
     });
 
-    // ========= Init: restore from localStorage if present =========
-    const stored = loadState();
-    if (stored) {
-      state.count = stored.count;
-      state.name = stored.name || '';
-      for (let i = 0; i < Math.min(stored.colors.length, 16); i++) {
-        const h = toFullHex(stored.colors[i]); if (h) state.colors[i] = h;
+    // ========= Init: restore from URL hash (shareable) or localStorage =========
+    const fromHash = readStateFromHash();
+    const stored = fromHash || loadState();
+    if (stored) applyStoredState(stored);
+
+    window.addEventListener('hashchange', () => {
+      const fromHashNow = readStateFromHash();
+      if (fromHashNow) {
+        applyStoredState(fromHashNow);
+        saveState();
       }
-      if (stored.sentimentColors && stored.sentimentColors.length === 3)
-        state.sentimentColors = stored.sentimentColors.slice();
-      if (stored.divergentColors && stored.divergentColors.length === 3)
-        state.divergentColors = stored.divergentColors.slice();
-      if (stored.sentimentEnabled !== undefined) state.sentimentEnabled = stored.sentimentEnabled === true;
-      if (stored.divergentEnabled !== undefined) state.divergentEnabled = stored.divergentEnabled === true;
-      themeNameEl.value = state.name;
-    }
+    });
 
     savedThemes = loadSavedThemes();
     refreshSavedThemesUI('');
@@ -2556,6 +2653,8 @@
       pickerSetSelect.value = 'basic';
       showPickerSubsection('basic');
     }
+    saveState();
+    updateHashFromState();
   </script>
 </body>
 

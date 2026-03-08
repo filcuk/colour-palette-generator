@@ -15,8 +15,9 @@ Site: [github.io/colour-palette-generator](https://filcuk.github.io/colour-palet
 - **Various input options**: HEX, RGB, CYMK, colour picker, colour sets
 - B/W **contrast check**
 - **Saving palettes** to browser
-- **Export** to svg image, Power BI json theme file
+- **Export with preview** to svg image, Power BI json theme file
 - **Import** any exported format to restore palette
+- **Share** themes simply by sharing the full URL
 
 ## Credit
 Logo image: <a href="https://www.flaticon.com/free-icons/color-palette" title="color palette icons">Color palette icons created by Freepik - Flaticon</a>
