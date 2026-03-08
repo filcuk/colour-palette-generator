@@ -235,6 +235,20 @@
       white-space: pre-wrap;
       word-break: break-all;
     }
+    .svg-preview {
+      margin-top: 8px;
+      padding: 10px;
+      background: var(--bg-sub);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 8px;
+      overflow: auto;
+      max-height: 280px;
+    }
+    .svg-preview svg {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
 
     .btn-secondary {
       background: #fff;
@@ -621,7 +635,8 @@
 
   <section class="page-section" aria-labelledby="section-themes">
     <h2 id="section-themes">Themes</h2>
-    <div class="controls">
+    <p class="tip" style="margin-top:10px; margin-bottom:0;">⚠️ Themes are stored only in this browser. Clearing site data, using a different browser or device, or resetting the browser may remove them.</p>
+    <div class="controls" style="margin-top:10px;">
       <div class="themes-manager" title="Name your theme or pick a saved one; used for export and stored in SVG">
         <div class="theme-combo">
           <input id="themeName" class="theme-combo-input" type="text" placeholder="My theme or pick saved…" autocomplete="off" />
@@ -638,7 +653,6 @@
         </div>
       </div>
     </div>
-    <p class="tip" style="margin-top:10px; margin-bottom:0;">⚠️ Themes are stored only in this browser. Clearing site data, using a different browser or device, or resetting the browser may remove them.</p>
   </section>
 
   <section class="page-section" aria-labelledby="section-colours">
@@ -716,9 +730,10 @@
 
   <section class="page-section" aria-labelledby="section-download">
     <h2 id="section-download">Export & Import</h2>
+    <div class="tip dropzone" id="dropzone">💡 Tip: drag &amp; drop an SVG or JSON file here to restore the theme and palette.</div>
     <div class="colour-block">
       <h3 class="colour-block-title">SVG</h3>
-      <div class="tip dropzone" id="dropzone">💡 Tip: drag &amp; drop an SVG or JSON file here to restore the theme and palette.</div>
+      <div id="svgPreview" class="svg-preview" aria-label="SVG export preview"></div>
       <div class="actions" style="margin-top:10px;">
         <button id="downloadBtn" class="btn-action" type="button" title="Export current palette as SVG">Export SVG</button>
         <button id="importBtn" class="btn-action" type="button" title="Import an exported palette SVG">Import SVG</button>
@@ -737,7 +752,7 @@
   </section>
 
   <footer class="page-footer">
-    <a href="https://github.com/filcuk/colour-palette-generator" target="_blank" rel="noopener noreferrer">Colour Palette Generator</a> on GitHub
+    <a href="https://github.com/filcuk/colour-palette-generator" target="_blank" rel="noopener noreferrer">Colour Palette Generator</a> on GitHub • <a href="https://github.com/filcuk/colour-palette-generator/issues" target="_blank" rel="noopener noreferrer">Submit Issues or Ideas</a>
   </footer>
 
   <script>
@@ -951,6 +966,7 @@
     const fileInput = document.getElementById('fileInput');
     const jsonFileInput = document.getElementById('jsonFileInput');
     const dropzone = document.getElementById('dropzone');
+    const svgPreviewEl = document.getElementById('svgPreview');
     const jsonPreviewEl = document.getElementById('jsonPreview');
     const exportJsonBtn = document.getElementById('exportJsonBtn');
     const importJsonBtn = document.getElementById('importJsonBtn');
@@ -1229,6 +1245,7 @@
       if (state.activeSection === 'theme') setActive('theme', Math.min(state.activeIndex, n - 1));
       saveState();
       updateJsonPreview();
+      updateSvgPreview();
     }
     countSlider.addEventListener('input', (e) => {
       const n = Math.max(1, Math.min(16, parseInt(e.target.value || '8', 10)));
@@ -1243,6 +1260,8 @@
         updateOptionalSectionsVisibility();
         updateSummary();
         saveState();
+        updateJsonPreview();
+        updateSvgPreview();
       });
     }
     if (divergentEnabledCb) {
@@ -1251,6 +1270,8 @@
         updateOptionalSectionsVisibility();
         updateSummary();
         saveState();
+        updateJsonPreview();
+        updateSvgPreview();
       });
     }
 
@@ -1288,8 +1309,8 @@
       }
       if (state.divergentEnabled) {
         const divergent = (state.divergentColors || DEFAULTS_DIVERGENT).slice(0, 3).map((c, i) => toFullHex(c) || toFullHex(DEFAULTS_DIVERGENT[i]) || '#000000');
-        payload.neutral = divergent[0];
         payload.minimum = divergent[1];
+        payload.neutral = divergent[0];
         payload.maximum = divergent[2];
       }
       return payload;
@@ -1371,34 +1392,45 @@
     }
 
     // ========= Export SVG (only colours shown; includes theme name) =========
-    downloadBtn.addEventListener('click', () => {
-      const themeColors = inputs.map(i => toFullHex(i.value || ''));
-      const firstInvalid = themeColors.findIndex(c => !c);
-      if (firstInvalid !== -1) {
-        inputs[firstInvalid].classList.add('invalid');
-        inputs[firstInvalid].focus();
-        alert('Please fix invalid hex values in theme colours (use #RRGGBB or #RGB).');
-        return;
-      }
-      const sentiment = (state.sentimentColors || []).slice(0, 3).map(c => toFullHex(c)).filter(Boolean);
-      const divergent = (state.divergentColors || []).slice(0, 3).map(c => toFullHex(c)).filter(Boolean);
-
-      const themeName = (state.name || '').trim();
-      const safeTitle = themeName || 'Color Palette';
-      const fileBase = sanitizeNameForFile(themeName) || 'palette';
-
+    function buildExportSvgString(opts) {
+      const {
+        themeColors,
+        sentiment,
+        divergent,
+        themeName,
+        sentimentEnabled,
+        divergentEnabled,
+        forPreview = false
+      } = opts;
+      const safeTitle = (themeName || '').trim() || 'Color Palette';
       const count = themeColors.length;
-      const sw = 120, sh = 110, gap = 16, rowGap = 14, pad = 20;
-      const hasSentiment = state.sentimentEnabled && sentiment.length === 3;
-      const hasDivergent = state.divergentEnabled && divergent.length === 3;
+      const sw = 80, sh = 40, gap = 8, rowGap = 8, pad = 8; // SVG swatch sizing
+      const rowLabelWidth = 80; // column 1: subtitles
+      const hasSentiment = sentimentEnabled && sentiment.length === 3;
+      const hasDivergent = divergentEnabled && divergent.length === 3;
       const numRows = 1 + (hasSentiment ? 1 : 0) + (hasDivergent ? 1 : 0);
-      const width = pad * 2 + count * sw + (count - 1) * gap;
+      // Grid: col1 = labels, col2-4 = swatches 1-3, col5-6 = gradient (spanning 2 columns)
+      const col2StartX = pad + rowLabelWidth + gap;
+      const gradientWidth = 2 * sw + gap; // columns 5 and 6
+      const gradientX = col2StartX + 3 * (sw + gap);
+      const themeRowWidth = 2 * pad + count * sw + (count - 1) * gap;
+      const optionalRowWidth = 2 * pad + rowLabelWidth + gap + 3 * (sw + gap) + gap + gradientWidth;
+      let width = themeRowWidth;
+      if (hasSentiment || hasDivergent) {
+        width = Math.max(themeRowWidth, optionalRowWidth);
+      }
       const height = pad * 2 + numRows * sh + (numRows - 1) * rowGap;
 
-      function swatchNodes(colors, startY, rolePrefix) {
+      function rowLabel(text, startY) {
+        return `
+  <text x="${pad}" y="${startY + sh / 2}" text-anchor="start" dominant-baseline="middle" font-size="12" fill="#555" font-family="sans-serif">${text}</text>`;
+      }
+
+      function swatchNodes(colors, startY, rolePrefix, startX) {
+        const baseX = startX !== undefined ? startX : col2StartX;
         let out = '';
         colors.forEach((hex, i) => {
-          const x = pad + i * (sw + gap);
+          const x = baseX + i * (sw + gap);
           const txtColor = autoTextOn(hex);
           const rBlack = contrastRatio('#000000', hex).toFixed(2);
           const rWhite = contrastRatio('#FFFFFF', hex).toFixed(2);
@@ -1418,34 +1450,102 @@
         return out;
       }
 
-      let nodes = swatchNodes(themeColors, pad, 'theme');
+      function gradientBox(colors, startY, gradientId) {
+        if (!colors || colors.length !== 3) return '';
+        const stops = colors.map((hex, i) => `<stop offset="${i === 0 ? 0 : i === 1 ? 0.5 : 1}" stop-color="${hex}"/>`).join('\n    ');
+        return `
+  <defs>
+    <linearGradient id="${gradientId}" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
+      ${stops}
+    </linearGradient>
+  </defs>
+  <rect x="${gradientX}" y="${startY}" width="${gradientWidth}" height="${sh}" rx="10" fill="url(#${gradientId})" stroke="rgba(0,0,0,0.15)"/>`;
+      }
+
+      let nodes = swatchNodes(themeColors, pad, 'theme', pad);
       let rowIndex = 1;
       if (hasSentiment) {
-        nodes += swatchNodes(sentiment, pad + rowIndex * (sh + rowGap), 'sentiment');
+        const sentimentY = pad + rowIndex * (sh + rowGap);
+        nodes += rowLabel('Sentiment', sentimentY);
+        nodes += swatchNodes(sentiment, sentimentY, 'sentiment', col2StartX);
+        nodes += gradientBox(sentiment, sentimentY, 'sentiment-gradient');
         rowIndex++;
       }
       if (hasDivergent) {
-        nodes += swatchNodes(divergent, pad + rowIndex * (sh + rowGap), 'divergent');
+        const divergentY = pad + rowIndex * (sh + rowGap);
+        nodes += rowLabel('Divergent', divergentY);
+        nodes += swatchNodes(divergent, divergentY, 'divergent', col2StartX);
+        nodes += gradientBox(divergent, divergentY, 'divergent-gradient');
       }
 
       const meta = {
         app: 'm365-copilot-palette',
         version: 6,
-        name: themeName,
+        name: (themeName || '').trim(),
         count,
         colors: themeColors,
-        ...(state.sentimentEnabled && sentiment.length === 3 ? { sentimentColors: sentiment } : {}),
-        ...(state.divergentEnabled && divergent.length === 3 ? { divergentColors: divergent } : {})
+        ...(sentimentEnabled && sentiment.length === 3 ? { sentimentColors: sentiment } : {}),
+        ...(divergentEnabled && divergent.length === 3 ? { divergentColors: divergent } : {})
       };
-      const svg =
-        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${safeTitle}">
+      const svgStyle = forPreview ? ' style="max-width:100%;height:auto"' : '';
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${safeTitle}"${svgStyle}>
   <title>${safeTitle}</title>
   <desc>Theme: ${safeTitle}. Palette exported with ${count} theme swatch(es)${hasSentiment ? ', sentiment row' : ''}${hasDivergent ? ', divergent row' : ''}. Metadata included for re-import.</desc>
   <metadata id="palette-meta">${JSON.stringify(meta)}</metadata>
-  <rect width="100%" height="100%" fill="#ffffff"/>
   ${nodes}
 </svg>`;
+    }
 
+    function updateSvgPreview() {
+      if (!svgPreviewEl) return;
+      try {
+        const themeColors = [];
+        for (let i = 0; i < state.count; i++) {
+          const hex = toFullHex(state.colors[i]) || toFullHex(DEFAULTS[i]) || '#000000';
+          themeColors.push(hex);
+        }
+        const sentiment = (state.sentimentColors || DEFAULTS_SENTIMENT).slice(0, 3).map((c, i) => toFullHex(c) || toFullHex(DEFAULTS_SENTIMENT[i]) || '#000000');
+        const divergent = (state.divergentColors || DEFAULTS_DIVERGENT).slice(0, 3).map((c, i) => toFullHex(c) || toFullHex(DEFAULTS_DIVERGENT[i]) || '#000000');
+        const svg = buildExportSvgString({
+          themeColors,
+          sentiment,
+          divergent,
+          themeName: state.name,
+          sentimentEnabled: state.sentimentEnabled,
+          divergentEnabled: state.divergentEnabled,
+          forPreview: true
+        });
+        svgPreviewEl.innerHTML = svg;
+      } catch {
+        svgPreviewEl.innerHTML = '';
+      }
+    }
+
+    downloadBtn.addEventListener('click', () => {
+      const themeColors = Array.from({ length: state.count }, (_, i) =>
+        toFullHex(inputs[i]?.value || state.colors[i] || ''));
+      const firstInvalid = themeColors.findIndex(c => !c);
+      if (firstInvalid !== -1) {
+        if (inputs[firstInvalid]) {
+          inputs[firstInvalid].classList.add('invalid');
+          inputs[firstInvalid].focus();
+        }
+        alert('Please fix invalid hex values in theme colours (use #RRGGBB or #RGB).');
+        return;
+      }
+      const sentiment = (state.sentimentColors || []).slice(0, 3).map(c => toFullHex(c)).filter(Boolean);
+      const divergent = (state.divergentColors || []).slice(0, 3).map(c => toFullHex(c)).filter(Boolean);
+      const themeName = (state.name || '').trim();
+      const fileBase = sanitizeNameForFile(themeName) || 'palette';
+      const svg = buildExportSvgString({
+        themeColors,
+        sentiment,
+        divergent,
+        themeName: state.name,
+        sentimentEnabled: state.sentimentEnabled,
+        divergentEnabled: state.divergentEnabled,
+        forPreview: false
+      });
       const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1899,6 +1999,7 @@
         themeStatusLabel.textContent = 'Not saved';
       }
       updateJsonPreview();
+      updateSvgPreview();
     }
 
     function refreshSavedThemesUI(selectedName) {
@@ -2097,6 +2198,7 @@
     refreshSavedThemesUI('');
     updateThemeStatus();
     updateJsonPreview();
+    updateSvgPreview();
 
     setCount(state.count);
     renderSentimentSwatches();
