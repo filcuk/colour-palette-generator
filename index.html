@@ -17,7 +17,7 @@
       --bad: #c83532;
       --ink: #111;
       --accent: #0078d4;
-      /* Callouts: light background + darker border */
+      /* Callouts: info boxes on the page */
       --callout-tip-bg: #fefce8;
       --callout-tip-border: #caad00;
       --callout-warning-bg: #fff4e0;
@@ -164,23 +164,23 @@
       font-weight: 600;
       cursor: default;
     }
-    .contrast-tooltip {
+    .tooltip {
       position: fixed;
       z-index: 9999;
       padding: 6px 10px;
       font: 12px/1.3 var(--font);
-      color: var(--ink);
-      background: var(--callout-info-bg);
-      border: 1px solid var(--callout-info-border);
+      color: #fff;
+      background: #000;
+      border: none;
       border-radius: 6px;
       white-space: pre-line;
       pointer-events: none;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
       opacity: 0;
       visibility: hidden;
       transition: none;
     }
-    .contrast-tooltip.visible {
+    .tooltip.visible {
       opacity: 1;
       visibility: visible;
     }
@@ -341,9 +341,9 @@
       text-decoration: underline;
     }
 
-    .tip,
-    .warning,
-    .info {
+    .callout-tip,
+    .callout-warning,
+    .callout-info {
       margin-top: 10px;
       border: 1px solid;
       border-radius: 10px;
@@ -351,15 +351,15 @@
       font: 12px/1.2 var(--font);
       color: #444;
     }
-    .tip {
+    .callout-tip {
       background: var(--callout-tip-bg);
       border-color: var(--callout-tip-border);
     }
-    .warning {
+    .callout-warning {
       background: var(--callout-warning-bg);
       border-color: var(--callout-warning-border);
     }
-    .info {
+    .callout-info {
       background: var(--callout-info-bg);
       border-color: var(--callout-info-border);
     }
@@ -498,10 +498,15 @@
     }
 
     .picker {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      grid-template-rows: minmax(0, min-content);
+      gap: 16px;
+      align-items: stretch;
+    }
+    .picker-picker-area {
       display: flex;
       gap: 16px;
-      align-items: flex-start;
-      flex-wrap: wrap;
     }
     .picker-col {
       display: flex;
@@ -513,6 +518,58 @@
     }
     .picker-col-right {
       min-width: 200px;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-self: stretch;
+    }
+    .picker-set-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      flex-shrink: 0;
+    }
+    .picker-set-row label {
+      font: 600 12px/1.2 var(--font);
+      color: #555;
+    }
+    .picker-set-select {
+      font: 12px/1.2 var(--font);
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, .15);
+      background: #fff;
+      min-width: 100px;
+    }
+    .picker-subsections-wrap {
+      flex: 0 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .picker-subsection {
+      border: 1px solid rgba(0, 0, 0, .1);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fafafa;
+      width: 100%;
+      min-width: 0;
+      flex: 0 1 auto;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+    .picker-subsection-hidden {
+      display: none;
+    }
+    .picker-subsection-title {
+      margin: 0 0 8px 0;
+      font: 600 13px/1.2 var(--font);
+      color: #555;
+      flex-shrink: 0;
     }
 
     .sv {
@@ -631,7 +688,13 @@
       display: flex;
       gap: 6px;
       flex-wrap: wrap;
-      max-width: 240px
+      width: 100%;
+      max-width: 100%;
+      min-height: auto;
+      flex: 0 1 auto;
+      align-self: flex-start;
+      align-content: flex-start;
+      box-sizing: border-box;
     }
 
     .actions {
@@ -653,13 +716,13 @@
 </head>
 
 <body>
-  <div id="contrastTooltip" class="contrast-tooltip" role="tooltip" aria-hidden="true"></div>
+  <div id="contrastTooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
   <h1>Colour Palette Generator</h1>
   <div class="subtitle">Generate a colour palette, validate contrast, export to svg, re-import back.</div>
 
   <section class="page-section" aria-labelledby="section-themes">
     <h2 id="section-themes">Themes</h2>
-    <p class="warning" style="margin-top:10px; margin-bottom:0;">⚠️ Themes are stored in this browser. Clearing site data or using a different browser will remove all stored themes.</p>
+    <p class="callout-warning" style="margin-top:10px; margin-bottom:0;">⚠️ Themes are stored in this browser. Clearing site data or using a different browser will remove all stored themes.</p>
     <div class="controls" style="margin-top:10px;">
       <div class="themes-manager" title="Name your theme or pick a saved one; used for export and stored in SVG">
         <div class="theme-combo">
@@ -681,7 +744,7 @@
 
   <section class="page-section" aria-labelledby="section-colours">
     <h2 id="section-colours">Colours</h2>
-    <p class="info" id="summary" style="margin-top:10px; margin-bottom:10px;">ℹ️ Contrast summary: —</p>
+    <p class="callout-info" id="summary" style="margin-top:10px; margin-bottom:10px;">ℹ️ Contrast summary: —</p>
     <div class="colour-block">
       <h3 class="colour-block-title">Theme colours</h3>
       <div class="slider-wrap" title="Pick how many theme colours (1–16)">
@@ -711,42 +774,48 @@
     </div>
     <div class="picker-panel preview-panel" id="pickerPanel">
       <div class="picker">
-        <div class="picker-col picker-col-inputs">
-          <div class="picker-shades" id="pickerShades" title="Click a shade to apply">
-            <div class="picker-shade narrow" id="pickerShade0" data-hex="" role="button" aria-label="Lighter shade"></div>
-            <div class="picker-shade narrow" id="pickerShade1" data-hex="" role="button" aria-label="Lighter shade"></div>
-            <div class="picker-shade center" id="pickerShade2" data-hex="" role="button" aria-label="Current colour"></div>
-            <div class="picker-shade narrow" id="pickerShade3" data-hex="" role="button" aria-label="Darker shade"></div>
-            <div class="picker-shade narrow" id="pickerShade4" data-hex="" role="button" aria-label="Darker shade"></div>
+        <div class="picker-picker-area">
+          <div class="picker-col picker-col-inputs">
+            <div class="picker-shades" id="pickerShades" title="Click a shade to apply">
+              <div class="picker-shade narrow" id="pickerShade0" data-hex="" role="button" aria-label="Lighter shade"></div>
+              <div class="picker-shade narrow" id="pickerShade1" data-hex="" role="button" aria-label="Lighter shade"></div>
+              <div class="picker-shade center" id="pickerShade2" data-hex="" role="button" aria-label="Current colour"></div>
+              <div class="picker-shade narrow" id="pickerShade3" data-hex="" role="button" aria-label="Darker shade"></div>
+              <div class="picker-shade narrow" id="pickerShade4" data-hex="" role="button" aria-label="Darker shade"></div>
+            </div>
+            <div class="picker-input-row">
+              <label>HEX</label>
+              <input id="pickerHex" class="picker-hex" type="text" dir="ltr" placeholder="#RRGGBB" autocomplete="off" />
+            </div>
+            <div class="picker-input-row">
+              <label>RGB</label>
+              <input id="pickerR" type="text" inputmode="numeric" placeholder="R" maxlength="3" title="Red 0–255" />
+              <input id="pickerG" type="text" inputmode="numeric" placeholder="G" maxlength="3" title="Green 0–255" />
+              <input id="pickerB" type="text" inputmode="numeric" placeholder="B" maxlength="3" title="Blue 0–255" />
+            </div>
+            <div class="picker-input-row">
+              <label>CMYK</label>
+              <input id="pickerC" type="text" inputmode="numeric" placeholder="C" maxlength="3" title="Cyan 0–100" />
+              <input id="pickerM" type="text" inputmode="numeric" placeholder="M" maxlength="3" title="Magenta 0–100" />
+              <input id="pickerY" type="text" inputmode="numeric" placeholder="Y" maxlength="3" title="Yellow 0–100" />
+              <input id="pickerK" type="text" inputmode="numeric" placeholder="K" maxlength="3" title="Key 0–100" />
+            </div>
           </div>
-          <div class="picker-input-row">
-            <label>HEX</label>
-            <input id="pickerHex" class="picker-hex" type="text" dir="ltr" placeholder="#RRGGBB" autocomplete="off" />
-          </div>
-          <div class="picker-input-row">
-            <label>RGB</label>
-            <input id="pickerR" type="text" inputmode="numeric" placeholder="R" maxlength="3" title="Red 0–255" />
-            <input id="pickerG" type="text" inputmode="numeric" placeholder="G" maxlength="3" title="Green 0–255" />
-            <input id="pickerB" type="text" inputmode="numeric" placeholder="B" maxlength="3" title="Blue 0–255" />
-          </div>
-          <div class="picker-input-row">
-            <label>CMYK</label>
-            <input id="pickerC" type="text" inputmode="numeric" placeholder="C" maxlength="3" title="Cyan 0–100" />
-            <input id="pickerM" type="text" inputmode="numeric" placeholder="M" maxlength="3" title="Magenta 0–100" />
-            <input id="pickerY" type="text" inputmode="numeric" placeholder="Y" maxlength="3" title="Yellow 0–100" />
-            <input id="pickerK" type="text" inputmode="numeric" placeholder="K" maxlength="3" title="Key 0–100" />
-          </div>
-        </div>
-        <div class="picker-col picker-col-sv">
-          <div id="sv" class="sv" aria-label="Saturation/Value area">
-            <div id="svHandle" class="sv-handle" style="left:0px; top:0px;"></div>
-          </div>
-          <div id="hue" class="hue" aria-label="Hue slider" style="margin-top:10px;">
-            <div id="hueHandle" class="hue-handle" style="left:0px;"></div>
+          <div class="picker-col picker-col-sv">
+            <div id="sv" class="sv" aria-label="Saturation/Value area">
+              <div id="svHandle" class="sv-handle" style="left:0px; top:0px;"></div>
+            </div>
+            <div id="hue" class="hue" aria-label="Hue slider" style="margin-top:10px;">
+              <div id="hueHandle" class="hue-handle" style="left:0px;"></div>
+            </div>
           </div>
         </div>
         <div class="picker-col picker-col-right">
-          <div class="quick-row" id="quickRow" title="Quick colours"></div>
+          <div class="picker-set-row">
+            <label for="pickerSetSelect">Set</label>
+            <select id="pickerSetSelect" class="picker-set-select" aria-label="Colour set"></select>
+          </div>
+          <div class="picker-subsections-wrap" id="pickerSubsectionsWrap"></div>
         </div>
       </div>
     </div>
@@ -754,7 +823,7 @@
 
   <section class="page-section" aria-labelledby="section-download">
     <h2 id="section-download">Export & Import</h2>
-    <div class="tip dropzone" id="dropzone">💡 Tip: drag &amp; drop an SVG or JSON file here to restore the theme and palette.</div>
+    <div class="callout-tip dropzone" id="dropzone">💡 Tip: drag &amp; drop an SVG or JSON file here to restore the theme and palette.</div>
     <div class="colour-block">
       <h3 class="colour-block-title">SVG</h3>
       <div id="svgPreview" class="svg-preview preview-panel" aria-label="SVG export preview"></div>
@@ -1018,7 +1087,6 @@
     const pickerM = document.getElementById('pickerM');
     const pickerY = document.getElementById('pickerY');
     const pickerK = document.getElementById('pickerK');
-    const quickRow = document.getElementById('quickRow');
     const contrastTooltipEl = document.getElementById('contrastTooltip');
 
     let wraps = [], inputs = [], badgesWraps = [];
@@ -1986,14 +2054,104 @@
       el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
     });
 
-    const QUICK = ['#FF0000', '#FFA500', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#000000', '#FFFFFF', '#808080', '#8B4513', '#800080'];
-    quickRow.innerHTML = QUICK.map(c => `<div class="chip" data-hex="${c}" style="background:${c}"></div>`).join('');
-    quickRow.addEventListener('click', (e) => {
-      const hex = e.target?.getAttribute?.('data-hex');
-      if (!hex) return;
-      pickerSetHex(hex);
-      applyColorToActive(hex);
-    });
+    // Colour sets: add { id, name, colors } where each color is a hex string or { hex, name } for tooltip
+    const PICKER_SETS = [
+      { id: 'basic', name: 'Basic', colors: ['#FF0000', '#FFA500', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#000000', '#FFFFFF', '#808080', '#8B4513', '#800080'] },
+      { id: 'fluent2', name: 'Fluent', colors: ['#FFB900', '#E74856', '#0078D7', '#0099BC', '#7A7574', '#767676', '#FF8C00', '#E81123', '#0063B1', '#2D7D9A', '#5D5A58', '#4C4A48', '#F7630C', '#EA005E', '#8E8CD8', '#00B7C3', '#68768A', '#69797E', '#CA5010', '#C30052', '#6B69D6', '#038387', '#515C6B', '#4A5459', '#DA3B01', '#E3008C', '#8764B8', '#00B294', '#567C73', '#647C64', '#EF6950', '#BF0077', '#744DA9', '#018574', '#486860', '#525E54', '#D13438', '#C239B3', '#B146C2', '#00CC6A', '#498205', '#847545', '#FF4343', '#9A0089', '#881798', '#10893E', '#107C10', '#7E735F'] },
+      { id: 'metro', name: 'Metro', colors: [
+        { hex: '#99b433', name: 'Light Green' }, { hex: '#00a300', name: 'Green' }, { hex: '#1e7145', name: 'Dark Green' },
+        { hex: '#ff0097', name: 'Magenta' }, { hex: '#9f00a7', name: 'Light Purple' }, { hex: '#7e3878', name: 'Purple' }, { hex: '#603cba', name: 'Dark Purple' },
+        { hex: '#1d1d1d', name: 'Darken' }, { hex: '#00aba9', name: 'Teal' },
+        { hex: '#eff4ff', name: 'Light Blue' }, { hex: '#2d89ef', name: 'Blue' }, { hex: '#2b5797', name: 'Dark Blue' },
+        { hex: '#ffc40d', name: 'Yellow' }, { hex: '#e3a21a', name: 'Orange' }, { hex: '#da532c', name: 'Dark Orange' },
+        { hex: '#ee1111', name: 'Red' }, { hex: '#b91d47', name: 'Dark Red' }, { hex: '#ffffff', name: 'White' }
+      ] },
+      { id: 'flatui', name: 'Flat UI', colors: [
+        { hex: '#C0392B', name: 'Pomegranate' }, { hex: '#E74C3C', name: 'Alizarin' }, { hex: '#9B59B6', name: 'Amethyst' }, { hex: '#8E44AD', name: 'Wisteria' },
+        { hex: '#2980B9', name: 'Belize Hole' }, { hex: '#3498DB', name: 'Peter River' }, { hex: '#1ABC9C', name: 'Turquoise' }, { hex: '#16A085', name: 'Green Sea' },
+        { hex: '#27AE60', name: 'Nephritis' }, { hex: '#2ECC71', name: 'Emerald' }, { hex: '#F1C40F', name: 'Sunflower' }, { hex: '#F39C12', name: 'Orange' },
+        { hex: '#E67E22', name: 'Carrot' }, { hex: '#D35400', name: 'Pumpkin' }, { hex: '#ECF0F1', name: 'Clouds' }, { hex: '#BDC3C7', name: 'Silver' },
+        { hex: '#7F8C8D', name: 'Concrete' }, { hex: '#7F8C8D', name: 'Asbestos' }, { hex: '#34495E', name: 'Wet Asphalt' }, { hex: '#2C3E50', name: 'Midnight Blue' }
+      ] },
+      { id: 'material', name: 'Material', colors: [
+        { hex: '#F44336', name: 'Red' }, { hex: '#E91E63', name: 'Pink' }, { hex: '#9C27B0', name: 'Purple' }, { hex: '#673AB7', name: 'Deep Purple' },
+        { hex: '#3F51B5', name: 'Indigo' }, { hex: '#2196F3', name: 'Blue' }, { hex: '#03A9F4', name: 'Light Blue' }, { hex: '#00BCD4', name: 'Cyan' },
+        { hex: '#009688', name: 'Teal' }, { hex: '#4CAF50', name: 'Green' }, { hex: '#8BC34A', name: 'Light Green' }, { hex: '#CDDC39', name: 'Lime' },
+        { hex: '#FFEB3B', name: 'Yellow' }, { hex: '#FFC107', name: 'Amber' }, { hex: '#FF9800', name: 'Orange' }, { hex: '#FF5722', name: 'Deep Orange' },
+        { hex: '#795548', name: 'Brown' }, { hex: '#9E9E9E', name: 'Grey' }, { hex: '#607D8B', name: 'Blue Grey' }, { hex: '#FFFFFF', name: 'White' }, { hex: '#000000', name: 'Black' }
+      ] },
+      { id: 'tailwind', name: 'Tailwind', colors: [
+        { hex: '#FB2C36', name: 'Red' }, { hex: '#FF692A', name: 'Orange' }, { hex: '#FE9A37', name: 'Amber' }, { hex: '#F0B13B', name: 'Yellow' }, { hex: '#7CCF35', name: 'Lime' },
+        { hex: '#31C950', name: 'Green' }, { hex: '#37BC7D', name: 'Emerald' }, { hex: '#36BBA7', name: 'Teal' }, { hex: '#3BB8DB', name: 'Cyan' }, { hex: '#34A6F4', name: 'Sky' },
+        { hex: '#2B7FFF', name: 'Blue' }, { hex: '#615FFF', name: 'Indigo' }, { hex: '#8E51FF', name: 'Violet' }, { hex: '#AD46FF', name: 'Purple' }, { hex: '#E12AFB', name: 'Fuchsia' },
+        { hex: '#F6339A', name: 'Pink' }, { hex: '#FF2056', name: 'Rose' }, { hex: '#62748E', name: 'Slate' }, { hex: '#6A7282', name: 'Gray' }, { hex: '#71717B', name: 'Zinc' },
+        { hex: '#737373', name: 'Neutral' }, { hex: '#79716B', name: 'Stone' }
+      ] },
+      { id: 'htmlnamed', name: 'Web Safe', colors: [
+        { hex: '#CD5C5C', name: 'IndianRed' }, { hex: '#F08080', name: 'LightCoral' }, { hex: '#FA8072', name: 'Salmon' }, { hex: '#E9967A', name: 'DarkSalmon' }, { hex: '#FFA07A', name: 'LightSalmon' }, { hex: '#DC143C', name: 'Crimson' }, { hex: '#FF0000', name: 'Red' }, { hex: '#B22222', name: 'FireBrick' }, { hex: '#8B0000', name: 'DarkRed' },
+        { hex: '#FFC0CB', name: 'Pink' }, { hex: '#FFB6C1', name: 'LightPink' }, { hex: '#FF69B4', name: 'HotPink' }, { hex: '#FF1493', name: 'DeepPink' }, { hex: '#C71585', name: 'MediumVioletRed' }, { hex: '#DB7093', name: 'PaleVioletRed' },
+        { hex: '#FF7F50', name: 'Coral' }, { hex: '#FF6347', name: 'Tomato' }, { hex: '#FF4500', name: 'OrangeRed' }, { hex: '#FF8C00', name: 'DarkOrange' }, { hex: '#FFA500', name: 'Orange' },
+        { hex: '#FFD700', name: 'Gold' }, { hex: '#FFFF00', name: 'Yellow' }, { hex: '#FFFFE0', name: 'LightYellow' }, { hex: '#FFFACD', name: 'LemonChiffon' }, { hex: '#FAFAD2', name: 'LightGoldenrodYellow' }, { hex: '#FFEFD5', name: 'PapayaWhip' }, { hex: '#FFE4B5', name: 'Moccasin' }, { hex: '#FFDAB9', name: 'PeachPuff' }, { hex: '#EEE8AA', name: 'PaleGoldenrod' }, { hex: '#F0E68C', name: 'Khaki' }, { hex: '#BDB76B', name: 'DarkKhaki' },
+        { hex: '#E6E6FA', name: 'Lavender' }, { hex: '#D8BFD8', name: 'Thistle' }, { hex: '#DDA0DD', name: 'Plum' }, { hex: '#EE82EE', name: 'Violet' }, { hex: '#DA70D6', name: 'Orchid' }, { hex: '#FF00FF', name: 'Fuchsia' }, { hex: '#BA55D3', name: 'MediumOrchid' }, { hex: '#9370DB', name: 'MediumPurple' }, { hex: '#663399', name: 'RebeccaPurple' }, { hex: '#8A2BE2', name: 'BlueViolet' }, { hex: '#9400D3', name: 'DarkViolet' }, { hex: '#9932CC', name: 'DarkOrchid' }, { hex: '#8B008B', name: 'DarkMagenta' }, { hex: '#800080', name: 'Purple' }, { hex: '#4B0082', name: 'Indigo' }, { hex: '#6A5ACD', name: 'SlateBlue' }, { hex: '#483D8B', name: 'DarkSlateBlue' }, { hex: '#7B68EE', name: 'MediumSlateBlue' },
+        { hex: '#ADFF2F', name: 'GreenYellow' }, { hex: '#7FFF00', name: 'Chartreuse' }, { hex: '#7CFC00', name: 'LawnGreen' }, { hex: '#00FF00', name: 'Lime' }, { hex: '#32CD32', name: 'LimeGreen' }, { hex: '#98FB98', name: 'PaleGreen' }, { hex: '#90EE90', name: 'LightGreen' }, { hex: '#00FA9A', name: 'MediumSpringGreen' }, { hex: '#00FF7F', name: 'SpringGreen' }, { hex: '#3CB371', name: 'MediumSeaGreen' }, { hex: '#2E8B57', name: 'SeaGreen' }, { hex: '#228B22', name: 'ForestGreen' }, { hex: '#008000', name: 'Green' }, { hex: '#006400', name: 'DarkGreen' }, { hex: '#9ACD32', name: 'YellowGreen' }, { hex: '#6B8E23', name: 'OliveDrab' }, { hex: '#808000', name: 'Olive' }, { hex: '#556B2F', name: 'DarkOliveGreen' }, { hex: '#66CDAA', name: 'MediumAquamarine' }, { hex: '#8FBC8B', name: 'DarkSeaGreen' }, { hex: '#20B2AA', name: 'LightSeaGreen' }, { hex: '#008B8B', name: 'DarkCyan' }, { hex: '#008080', name: 'Teal' },
+        { hex: '#00FFFF', name: 'Aqua' }, { hex: '#E0FFFF', name: 'LightCyan' }, { hex: '#AFEEEE', name: 'PaleTurquoise' }, { hex: '#7FFFD4', name: 'Aquamarine' }, { hex: '#40E0D0', name: 'Turquoise' }, { hex: '#48D1CC', name: 'MediumTurquoise' }, { hex: '#00CED1', name: 'DarkTurquoise' }, { hex: '#5F9EA0', name: 'CadetBlue' }, { hex: '#4682B4', name: 'SteelBlue' }, { hex: '#B0C4DE', name: 'LightSteelBlue' }, { hex: '#B0E0E6', name: 'PowderBlue' }, { hex: '#ADD8E6', name: 'LightBlue' }, { hex: '#87CEEB', name: 'SkyBlue' }, { hex: '#87CEFA', name: 'LightSkyBlue' }, { hex: '#00BFFF', name: 'DeepSkyBlue' }, { hex: '#1E90FF', name: 'DodgerBlue' }, { hex: '#6495ED', name: 'CornflowerBlue' }, { hex: '#4169E1', name: 'RoyalBlue' }, { hex: '#0000FF', name: 'Blue' }, { hex: '#0000CD', name: 'MediumBlue' }, { hex: '#00008B', name: 'DarkBlue' }, { hex: '#000080', name: 'Navy' }, { hex: '#191970', name: 'MidnightBlue' },
+        { hex: '#FFF8DC', name: 'Cornsilk' }, { hex: '#FFEBCD', name: 'BlanchedAlmond' }, { hex: '#FFE4C4', name: 'Bisque' }, { hex: '#FFDEAD', name: 'NavajoWhite' }, { hex: '#F5DEB3', name: 'Wheat' }, { hex: '#DEB887', name: 'BurlyWood' }, { hex: '#D2B48C', name: 'Tan' }, { hex: '#BC8F8F', name: 'RosyBrown' }, { hex: '#F4A460', name: 'SandyBrown' }, { hex: '#DAA520', name: 'Goldenrod' }, { hex: '#B8860B', name: 'DarkGoldenrod' }, { hex: '#CD853F', name: 'Peru' }, { hex: '#D2691E', name: 'Chocolate' }, { hex: '#8B4513', name: 'SaddleBrown' }, { hex: '#A0522D', name: 'Sienna' }, { hex: '#A52A2A', name: 'Brown' }, { hex: '#800000', name: 'Maroon' },
+        { hex: '#FFFFFF', name: 'White' }, { hex: '#FFFAFA', name: 'Snow' }, { hex: '#F0FFF0', name: 'HoneyDew' }, { hex: '#F5FFFA', name: 'MintCream' }, { hex: '#F0FFFF', name: 'Azure' }, { hex: '#F0F8FF', name: 'AliceBlue' }, { hex: '#F8F8FF', name: 'GhostWhite' }, { hex: '#F5F5F5', name: 'WhiteSmoke' }, { hex: '#FFF5EE', name: 'SeaShell' }, { hex: '#F5F5DC', name: 'Beige' }, { hex: '#FDF5E6', name: 'OldLace' }, { hex: '#FFFAF0', name: 'FloralWhite' }, { hex: '#FFFFF0', name: 'Ivory' }, { hex: '#FAEBD7', name: 'AntiqueWhite' }, { hex: '#FAF0E6', name: 'Linen' }, { hex: '#FFF0F5', name: 'LavenderBlush' }, { hex: '#FFE4E1', name: 'MistyRose' },
+        { hex: '#DCDCDC', name: 'Gainsboro' }, { hex: '#D3D3D3', name: 'LightGray' }, { hex: '#C0C0C0', name: 'Silver' }, { hex: '#A9A9A9', name: 'DarkGray' }, { hex: '#808080', name: 'Gray' }, { hex: '#696969', name: 'DimGray' }, { hex: '#778899', name: 'LightSlateGray' }, { hex: '#708090', name: 'SlateGray' }, { hex: '#2F4F4F', name: 'DarkSlateGray' }, { hex: '#000000', name: 'Black' }
+      ] }
+    ];
+
+    function chipHtml(color) {
+      const hex = typeof color === 'string' ? color : color.hex;
+      const name = typeof color === 'string' ? '' : (color.name || '');
+      const tooltipAttr = name ? ` data-tooltip="${name.replace(/"/g, '&quot;')}"` : '';
+      return `<div class="chip" data-hex="${hex}"${tooltipAttr} style="background:${hex}"></div>`;
+    }
+    const pickerSetSelect = document.getElementById('pickerSetSelect');
+    const pickerSubsectionsWrap = document.getElementById('pickerSubsectionsWrap');
+    if (pickerSetSelect && pickerSubsectionsWrap) {
+      PICKER_SETS.forEach((set, index) => {
+        const option = document.createElement('option');
+        option.value = set.id;
+        option.textContent = set.name;
+        if (index === 0) option.selected = true;
+        pickerSetSelect.appendChild(option);
+        const subsection = document.createElement('div');
+        subsection.className = 'picker-subsection' + (index === 0 ? '' : ' picker-subsection-hidden');
+        subsection.id = 'pickerSubsection' + set.id.charAt(0).toUpperCase() + set.id.slice(1);
+        subsection.dataset.set = set.id;
+        const quickRow = document.createElement('div');
+        quickRow.className = 'quick-row';
+        quickRow.title = set.name;
+        quickRow.innerHTML = set.colors.map(c => chipHtml(c)).join('');
+        quickRow.addEventListener('click', (e) => {
+          const hex = e.target?.getAttribute?.('data-hex');
+          if (!hex) return;
+          pickerSetHex(hex);
+          applyColorToActive(hex);
+        });
+        subsection.appendChild(quickRow);
+        pickerSubsectionsWrap.appendChild(subsection);
+      });
+      pickerSubsectionsWrap.addEventListener('mouseover', (e) => {
+        const chip = e.target?.closest?.('.chip[data-tooltip]');
+        if (chip) showContrastTooltip(chip);
+      });
+      pickerSubsectionsWrap.addEventListener('mouseout', (e) => {
+        const fromChip = e.target?.closest?.('.chip[data-tooltip]');
+        const toChip = e.relatedTarget?.closest?.('.chip[data-tooltip]');
+        if (fromChip && !toChip) hideContrastTooltip();
+      });
+    }
+    function showPickerSubsection(setId) {
+      if (!pickerSubsectionsWrap) return;
+      pickerSubsectionsWrap.querySelectorAll('.picker-subsection').forEach(el => {
+        el.classList.toggle('picker-subsection-hidden', el.dataset.set !== setId);
+      });
+    }
+    if (pickerSetSelect) {
+      pickerSetSelect.addEventListener('change', () => showPickerSubsection(pickerSetSelect.value));
+    }
     const pickerShadesEl = document.getElementById('pickerShades');
     if (pickerShadesEl) {
       pickerShadesEl.addEventListener('click', (e) => {
@@ -2240,6 +2398,10 @@
     renderDivergentSwatches();
     updateOptionalSectionsVisibility();
     setActive('theme', 0);
+    if (pickerSetSelect) {
+      pickerSetSelect.value = 'basic';
+      showPickerSubsection('basic');
+    }
   </script>
 </body>
 
