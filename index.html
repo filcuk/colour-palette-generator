@@ -307,6 +307,14 @@
       color: #111;
       border: 1px solid rgba(0, 0, 0, .15)
     }
+    #resetBtn {
+      margin-left: auto;
+    }
+    #resetBtn:hover {
+      background: #c00;
+      color: #fff;
+      border-color: #a00;
+    }
 
     input[type="file"] {
       display: none
@@ -824,11 +832,11 @@
         <button id="saveThemeBtn" type="button" title="Save current palette as a named theme">Save</button>
         <button id="newThemeBtn" type="button" title="Create a new theme with default colours and save to storage">New</button>
         <button id="deleteThemeBtn" type="button" title="Delete the theme with the current name">Delete</button>
-        <button id="resetBtn" class="btn-secondary" type="button" title="Clear all stored themes and reset palette">Reset</button>
         <div class="theme-status" id="themeStatus" role="status" aria-live="polite">
           <span class="theme-status-icon" id="themeStatusIcon" aria-hidden="true"></span>
           <span class="theme-status-label" id="themeStatusLabel">—</span>
         </div>
+        <button id="resetBtn" class="btn-secondary" type="button" title="Clear all stored themes and reset palette">Reset</button>
       </div>
     </div>
   </section>
