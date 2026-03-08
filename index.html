@@ -712,6 +712,36 @@
       border: 1px solid rgba(0, 0, 0, .2);
       cursor: pointer;
     }
+
+    @media (max-width: 720px) {
+      .picker {
+        grid-template-columns: 1fr;
+        min-width: 0;
+      }
+      .picker-picker-area {
+        flex-direction: column;
+        min-width: 0;
+      }
+      .picker-col-inputs {
+        min-width: 0;
+      }
+      .picker-col-right {
+        min-width: 0;
+      }
+      .picker-col-sv {
+        min-width: 0;
+      }
+      .sv {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      .hue {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+    }
   </style>
 </head>
 
