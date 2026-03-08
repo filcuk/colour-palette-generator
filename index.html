@@ -299,6 +299,15 @@
       background: #e8f5e9;
       border-color: #4caf50;
     }
+    .svg-preview-wrap {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .svg-preview-wrap .json-copy-btn {
+      top: 8px;
+      right: 8px;
+    }
     .json-preview {
       margin: 0;
       padding: 12px 14px;
@@ -961,7 +970,10 @@
         <input type="checkbox" id="svgHideColourLabels" />
         <span>Hide colour labels</span>
       </label>
-      <div id="svgPreview" class="svg-preview preview-panel" aria-label="SVG export preview"></div>
+      <div class="svg-preview-wrap preview-panel">
+        <button type="button" id="svgCopyBtn" class="json-copy-btn" title="Copy SVG to clipboard" aria-label="Copy SVG to clipboard">Copy</button>
+        <div id="svgPreview" class="svg-preview" aria-label="SVG export preview"></div>
+      </div>
       <div class="actions">
         <button id="downloadBtn" class="btn-action" type="button" title="Export current palette as SVG">Export SVG</button>
         <button id="importBtn" class="btn-action" type="button" title="Import an exported palette SVG">Import SVG</button>
@@ -1306,6 +1318,7 @@
     const jsonFileInput = document.getElementById('jsonFileInput');
     const dropzone = document.getElementById('dropzone');
     const svgHideColourLabelsCb = document.getElementById('svgHideColourLabels');
+    const svgCopyBtn = document.getElementById('svgCopyBtn');
     const svgPreviewEl = document.getElementById('svgPreview');
     const jsonPreviewEl = document.getElementById('jsonPreview');
     const jsonCopyBtn = document.getElementById('jsonCopyBtn');
@@ -1750,6 +1763,65 @@
           setTimeout(() => { jsonCopyBtn.textContent = 'Copy'; }, 2000);
         }
       });
+    }
+    if (svgCopyBtn) {
+      svgCopyBtn.addEventListener('click', () => {
+        const themeColors = [];
+        for (let i = 0; i < state.count; i++) {
+          const hex = toFullHex(state.colors[i]) || toFullHex(DEFAULTS[i]) || '#000000';
+          themeColors.push(hex);
+        }
+        const sentiment = (state.sentimentColors || DEFAULTS_SENTIMENT).slice(0, 3).map((c, i) => toFullHex(c) || toFullHex(DEFAULTS_SENTIMENT[i]) || '#000000');
+        const divergent = (state.divergentColors || DEFAULTS_DIVERGENT).slice(0, 3).map((c, i) => toFullHex(c) || toFullHex(DEFAULTS_DIVERGENT[i]) || '#000000');
+        const svg = buildExportSvgString({
+          themeColors,
+          sentiment,
+          divergent,
+          themeName: state.name,
+          sentimentEnabled: state.sentimentEnabled,
+          divergentEnabled: state.divergentEnabled,
+          hideColourLabels: !!state.svgHideColourLabels,
+          forPreview: false
+        });
+        const done = () => {
+          svgCopyBtn.textContent = 'Copied!';
+          svgCopyBtn.classList.add('copied');
+          setTimeout(() => {
+            svgCopyBtn.textContent = 'Copy';
+            svgCopyBtn.classList.remove('copied');
+          }, 2000);
+        };
+        const fail = () => {
+          svgCopyBtn.textContent = 'Copy failed';
+          setTimeout(() => { svgCopyBtn.textContent = 'Copy'; }, 2000);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(svg).then(done).catch(() => {
+            copySvgFallback(svg, done, fail);
+          });
+        } else {
+          copySvgFallback(svg, done, fail);
+        }
+      });
+    }
+    function copySvgFallback(svg, onSuccess, onFail) {
+      const ta = document.createElement('textarea');
+      ta.value = svg;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        if (document.execCommand('copy')) {
+          onSuccess();
+        } else {
+          onFail();
+        }
+      } catch {
+        onFail();
+      }
+      document.body.removeChild(ta);
     }
 
     async function handleJsonImport(file) {
