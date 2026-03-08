@@ -235,6 +235,36 @@
       border: 1px solid rgba(0, 0, 0, .12);
       box-shadow: 0 4px 18px rgba(0, 0, 0, .06);
     }
+    .json-preview-wrap {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .json-copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 1;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-family: inherit;
+      border: 1px solid rgba(0, 0, 0, .15);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+    }
+    .json-copy-btn:hover {
+      background: #f5f5f5;
+    }
+    .json-copy-btn:active {
+      background: #eee;
+    }
+    .json-copy-btn.copied {
+      background: #e8f5e9;
+      border-color: #4caf50;
+    }
     .json-preview {
       margin: 0;
       padding: 12px 14px;
@@ -871,7 +901,10 @@
     </div>
     <div class="colour-block">
       <h3 id="json-preview-heading" class="colour-block-title">JSON</h3>
-      <pre id="jsonPreview" class="json-preview preview-panel" aria-live="polite" aria-labelledby="json-preview-heading"></pre>
+      <div class="json-preview-wrap preview-panel">
+        <button type="button" id="jsonCopyBtn" class="json-copy-btn" title="Copy JSON to clipboard" aria-label="Copy JSON to clipboard">Copy</button>
+        <pre id="jsonPreview" class="json-preview" aria-live="polite" aria-labelledby="json-preview-heading"></pre>
+      </div>
       <div class="actions" style="margin-top:8px;">
         <button id="exportJsonBtn" class="btn-action" type="button" title="Download current theme as JSON">Export JSON</button>
         <button id="importJsonBtn" class="btn-action" type="button" title="Import a theme from JSON file">Import JSON</button>
@@ -1097,6 +1130,7 @@
     const dropzone = document.getElementById('dropzone');
     const svgPreviewEl = document.getElementById('svgPreview');
     const jsonPreviewEl = document.getElementById('jsonPreview');
+    const jsonCopyBtn = document.getElementById('jsonCopyBtn');
     const exportJsonBtn = document.getElementById('exportJsonBtn');
     const importJsonBtn = document.getElementById('importJsonBtn');
     const summaryEl = document.getElementById('summary');
@@ -1512,6 +1546,24 @@
       } catch {
         jsonPreviewEl.textContent = '';
       }
+    }
+    if (jsonCopyBtn) {
+      jsonCopyBtn.addEventListener('click', async () => {
+        try {
+          const payload = buildThemeJsonPayload();
+          const raw = JSON.stringify(payload, null, 4);
+          await navigator.clipboard.writeText(raw);
+          jsonCopyBtn.textContent = 'Copied!';
+          jsonCopyBtn.classList.add('copied');
+          setTimeout(() => {
+            jsonCopyBtn.textContent = 'Copy';
+            jsonCopyBtn.classList.remove('copied');
+          }, 2000);
+        } catch {
+          jsonCopyBtn.textContent = 'Copy failed';
+          setTimeout(() => { jsonCopyBtn.textContent = 'Copy'; }, 2000);
+        }
+      });
     }
 
     async function handleJsonImport(file) {
