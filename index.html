@@ -249,6 +249,12 @@
       white-space: pre-wrap;
       word-break: break-all;
     }
+    .json-preview .json-key { color: #0560b8; }
+    .json-preview .json-string { color: #0e6e34; }
+    .json-preview .json-number { color: #b11a1a; }
+    .json-preview .json-boolean { color: #7c2699; }
+    .json-preview .json-null { color: #6b6b6b; }
+    .json-preview .json-punctuation { color: #5a5a5a; }
     .svg-preview {
       margin-top: 8px;
       padding: 10px;
@@ -1437,11 +1443,72 @@
       }
       return payload;
     }
+    function escapeHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function highlightJson(jsonString) {
+      let i = 0;
+      const len = jsonString.length;
+      const out = [];
+      function span(cls, text) {
+        out.push('<span class="json-' + cls + '">', escapeHtml(text), '</span>');
+      }
+      while (i < len) {
+        const ch = jsonString[i];
+        if (ch === '"') {
+          let key = false;
+          i++;
+          let s = '';
+          while (i < len) {
+            const c = jsonString[i];
+            if (c === '\\') { s += jsonString[i] + jsonString[i + 1]; i += 2; continue; }
+            if (c === '"') { i++; break; }
+            s += c;
+            i++;
+          }
+          let j = i;
+          while (j < len && /[\s]/.test(jsonString[j])) j++;
+          if (jsonString[j] === ':') key = true;
+          out.push('<span class="json-' + (key ? 'key' : 'string') + '">"', escapeHtml(s), '"</span>');
+          continue;
+        }
+        if (/[-0-9]/.test(ch)) {
+          let num = '';
+          while (i < len && /[-0-9.eE+]/.test(jsonString[i])) num += jsonString[i++];
+          span('number', num);
+          continue;
+        }
+        if (ch === 't' && jsonString.slice(i, i + 4) === 'true') {
+          span('boolean', 'true');
+          i += 4;
+          continue;
+        }
+        if (ch === 'f' && jsonString.slice(i, i + 5) === 'false') {
+          span('boolean', 'false');
+          i += 5;
+          continue;
+        }
+        if (ch === 'n' && jsonString.slice(i, i + 4) === 'null') {
+          span('null', 'null');
+          i += 4;
+          continue;
+        }
+        if (/[{}\[\],:]/.test(ch)) {
+          span('punctuation', ch);
+          i++;
+          continue;
+        }
+        out.push(escapeHtml(ch));
+        i++;
+      }
+      return out.join('');
+    }
     function updateJsonPreview() {
       if (!jsonPreviewEl) return;
       try {
         const payload = buildThemeJsonPayload();
-        jsonPreviewEl.textContent = JSON.stringify(payload, null, 4);
+        const raw = JSON.stringify(payload, null, 4);
+        jsonPreviewEl.innerHTML = highlightJson(raw);
       } catch {
         jsonPreviewEl.textContent = '';
       }
