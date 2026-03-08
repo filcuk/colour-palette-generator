@@ -231,6 +231,10 @@
       margin-bottom: 6px;
       color: var(--text);
     }
+    .preview-panel {
+      border: 1px solid rgba(0, 0, 0, .12);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, .06);
+    }
     .json-preview {
       margin: 0;
       padding: 12px 14px;
@@ -238,7 +242,6 @@
       font-size: 12px;
       line-height: 1.5;
       background: #fff;
-      border: 1px solid rgba(0, 0, 0, 0.08);
       border-radius: 8px;
       overflow: auto;
       max-height: 280px;
@@ -250,7 +253,6 @@
       margin-top: 8px;
       padding: 10px;
       background: #fff;
-      border: 1px solid rgba(0, 0, 0, 0.08);
       border-radius: 8px;
       overflow: auto;
       max-height: 280px;
@@ -476,10 +478,8 @@
       flex-wrap: wrap;
       align-items: flex-start;
       background: #fff;
-      border: 1px solid rgba(0, 0, 0, .12);
       border-radius: 10px;
       padding: 12px;
-      box-shadow: 0 4px 18px rgba(0, 0, 0, .06);
     }
 
     .picker-btn {
@@ -659,7 +659,7 @@
 
   <section class="page-section" aria-labelledby="section-themes">
     <h2 id="section-themes">Themes</h2>
-    <p class="warning" style="margin-top:10px; margin-bottom:0;">⚠️ Themes are stored in this browser. Clearing site data, using a different browser or device, or resetting the browser will remove all stored themes.</p>
+    <p class="warning" style="margin-top:10px; margin-bottom:0;">⚠️ Themes are stored in this browser. Clearing site data or using a different browser will remove all stored themes.</p>
     <div class="controls" style="margin-top:10px;">
       <div class="themes-manager" title="Name your theme or pick a saved one; used for export and stored in SVG">
         <div class="theme-combo">
@@ -709,7 +709,7 @@
         <div class="row row-fixed" id="rowDivergent" role="group" aria-label="Divergent color swatches"></div>
       </div>
     </div>
-    <div class="picker-panel" id="pickerPanel">
+    <div class="picker-panel preview-panel" id="pickerPanel">
       <div class="picker">
         <div class="picker-col picker-col-inputs">
           <div class="picker-shades" id="pickerShades" title="Click a shade to apply">
@@ -757,7 +757,7 @@
     <div class="tip dropzone" id="dropzone">💡 Tip: drag &amp; drop an SVG or JSON file here to restore the theme and palette.</div>
     <div class="colour-block">
       <h3 class="colour-block-title">SVG</h3>
-      <div id="svgPreview" class="svg-preview" aria-label="SVG export preview"></div>
+      <div id="svgPreview" class="svg-preview preview-panel" aria-label="SVG export preview"></div>
       <div class="actions" style="margin-top:10px;">
         <button id="downloadBtn" class="btn-action" type="button" title="Export current palette as SVG">Export SVG</button>
         <button id="importBtn" class="btn-action" type="button" title="Import an exported palette SVG">Import SVG</button>
@@ -765,8 +765,8 @@
       </div>
     </div>
     <div class="colour-block">
-      <h3 id="json-preview-heading" class="colour-block-title">Theme (JSON)</h3>
-      <pre id="jsonPreview" class="json-preview" aria-live="polite" aria-labelledby="json-preview-heading"></pre>
+      <h3 id="json-preview-heading" class="colour-block-title">JSON</h3>
+      <pre id="jsonPreview" class="json-preview preview-panel" aria-live="polite" aria-labelledby="json-preview-heading"></pre>
       <div class="actions" style="margin-top:8px;">
         <button id="exportJsonBtn" class="btn-action" type="button" title="Download current theme as JSON">Export JSON</button>
         <button id="importJsonBtn" class="btn-action" type="button" title="Import a theme from JSON file">Import JSON</button>
@@ -1687,13 +1687,20 @@
           if (Array.isArray(parsed.sentimentColors) && parsed.sentimentColors.length === 3) {
             state.sentimentColors = parsed.sentimentColors.map(toFullHex).filter(Boolean).slice(0, 3);
             if (state.sentimentColors.length < 3) state.sentimentColors = DEFAULTS_SENTIMENT.slice();
+            state.sentimentEnabled = true;
+          } else {
+            state.sentimentEnabled = false;
           }
           if (Array.isArray(parsed.divergentColors) && parsed.divergentColors.length === 3) {
             state.divergentColors = parsed.divergentColors.map(toFullHex).filter(Boolean).slice(0, 3);
             if (state.divergentColors.length < 3) state.divergentColors = DEFAULTS_DIVERGENT.slice();
+            state.divergentEnabled = true;
+          } else {
+            state.divergentEnabled = false;
           }
           renderSentimentSwatches();
           renderDivergentSwatches();
+          updateOptionalSectionsVisibility();
           saveState();
 
           // Sync to saved themes: create if missing, or prompt to overwrite
