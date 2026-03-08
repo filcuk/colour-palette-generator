@@ -1445,7 +1445,8 @@
         updateContrast(hex, contrastEl);
         arr[idx] = toFullHex(hex);
         if (state.activeSection === section && state.activeIndex === idx) {
-          pickerSetHex(hex);
+          const pickerHex = toFullHex(hsvToHex(ph === 360 ? 0 : ph, ps, pv));
+          if (pickerHex !== toFullHex(hex)) pickerSetHex(hex);
         } else {
           setActive(section, idx);
         }
@@ -2180,13 +2181,18 @@
       updatePickerShades(full);
     }
     function pickerSetHue(h) {
-      ph = (h + 360) % 360;
-      const base = hsvToHex(ph, 1, 1);
+      if (h >= 359.5) {
+        ph = 360;
+      } else {
+        ph = (h + 360) % 360;
+      }
+      const hueForColor = ph === 360 ? 0 : ph;
+      const base = hsvToHex(hueForColor, 1, 1);
       svEl.style.background = base;
       const rect = hueEl.getBoundingClientRect();
       const x = (ph / 360) * rect.width;
       hueHandle.style.left = (x - 6) + 'px';
-      const hex = hsvToHex(ph, ps, pv);
+      const hex = hsvToHex(hueForColor, ps, pv);
       pickerPreview(hex);
       applyColorToActive(hex);
       positionSvHandle();
@@ -2246,7 +2252,8 @@
     function hueEventToH(e) {
       const rect = hueEl.getBoundingClientRect();
       const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-      return (x / rect.width) * 360;
+      const h = (x / rect.width) * 360;
+      return Math.min(360, h);
     }
     function startHueDrag(e) {
       e.preventDefault();
