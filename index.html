@@ -386,23 +386,43 @@
       margin-top: 10px;
       border: 1px solid;
       border-radius: 10px;
-      padding: 10px 12px;
+      padding: 10px 12px 10px 3.35em;
       font: 12px/1.2 var(--font);
+      position: relative;
+    }
+    .callout-tip::before,
+    .callout-warning::before,
+    .callout-info::before {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.15em;
+      line-height: 1;
     }
     .callout-tip {
       background: var(--callout-tip-bg);
       border-color: var(--callout-tip-border);
       color: var(--callout-tip-text);
     }
+    .callout-tip::before {
+      content: "💡";
+    }
     .callout-warning {
       background: var(--callout-warning-bg);
       border-color: var(--callout-warning-border);
       color: var(--callout-warning-text);
     }
+    .callout-warning::before {
+      content: "⚠️";
+    }
     .callout-info {
       background: var(--callout-info-bg);
       border-color: var(--callout-info-border);
       color: var(--callout-info-text);
+    }
+    .callout-info::before {
+      content: "ℹ️";
     }
 
     .dropzone.dragover {
@@ -793,7 +813,7 @@
 
   <section class="page-section" aria-labelledby="section-themes">
     <h2 id="section-themes">Themes</h2>
-    <p class="callout-warning" style="margin-top:10px; margin-bottom:0;">⚠️ Themes are stored in this browser. Clearing site data or using a different browser will remove all stored themes.</p>
+    <p class="callout-warning" style="margin-top:10px; margin-bottom:0;">Themes are stored in this browser. Clearing site data or using a different browser will remove all stored themes.</p>
     <div class="controls" style="margin-top:10px;">
       <div class="themes-manager" title="Name your theme or pick a saved one; used for export and stored in SVG">
         <div class="theme-combo">
@@ -894,7 +914,7 @@
 
   <section class="page-section" aria-labelledby="section-download">
     <h2 id="section-download">Export & Import</h2>
-    <div class="callout-tip dropzone" id="dropzone">💡 Tip: drag &amp; drop an SVG or JSON file here to restore the theme and palette.</div>
+    <div class="callout-tip dropzone" id="dropzone">Drag &amp; drop an SVG or JSON file here to restore the theme and palette.</div>
     <div class="colour-block">
       <h3 class="colour-block-title">SVG</h3>
       <div id="svgPreview" class="svg-preview preview-panel" aria-label="SVG export preview"></div>
@@ -1492,7 +1512,7 @@
       else {
         const pctB = totalB ? Math.round((passB / totalB) * 100) : 0;
         const pctW = totalW ? Math.round((passW / totalW) * 100) : 0;
-        summaryEl.textContent = `ℹ️ Testing contrast ≥ 4.5:1 — Black ${pctB}% · White ${pctW}%.`;
+        summaryEl.textContent = `Testing contrast ≥ 4.5:1 — Black ${pctB}% · White ${pctW}%.`;
       }
     }
 
