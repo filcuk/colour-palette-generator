@@ -269,7 +269,8 @@
       border: 1px solid rgba(0, 0, 0, .12);
       box-shadow: 0 4px 18px rgba(0, 0, 0, .06);
     }
-    .json-preview-wrap {
+    .json-preview-wrap,
+    .svg-preview-wrap {
       position: relative;
       border-radius: 8px;
       overflow: hidden;
@@ -298,15 +299,6 @@
     .json-copy-btn.copied {
       background: #e8f5e9;
       border-color: #4caf50;
-    }
-    .svg-preview-wrap {
-      position: relative;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    .svg-preview-wrap .json-copy-btn {
-      top: 8px;
-      right: 8px;
     }
     .json-preview {
       margin: 0;
@@ -1104,9 +1096,51 @@
       activeIndex: 0
     };
 
+    /** Resolved theme colours from state (for preview, SVG copy, JSON, persistence). */
+    function getThemeColorsFromState() {
+      return Array.from({ length: state.count }, (_, i) =>
+        toFullHex(state.colors[i]) || toFullHex(DEFAULTS[i]) || '#000000');
+    }
+    /** Sentiment / divergent triples with fallbacks — used for SVG export and preview. */
+    function getSentimentColorsResolved() {
+      return (state.sentimentColors || DEFAULTS_SENTIMENT).slice(0, 3).map((c, i) =>
+        toFullHex(c) || toFullHex(DEFAULTS_SENTIMENT[i]) || '#000000');
+    }
+    function getDivergentColorsResolved() {
+      return (state.divergentColors || DEFAULTS_DIVERGENT).slice(0, 3).map((c, i) =>
+        toFullHex(c) || toFullHex(DEFAULTS_DIVERGENT[i]) || '#000000');
+    }
+    /** Options for `buildExportSvgString` from current state; override `themeColors` when exporting from inputs. */
+    function buildExportSvgOptsFromState(forPreview) {
+      return {
+        themeColors: getThemeColorsFromState(),
+        sentiment: getSentimentColorsResolved(),
+        divergent: getDivergentColorsResolved(),
+        themeName: state.name,
+        sentimentEnabled: state.sentimentEnabled,
+        divergentEnabled: state.divergentEnabled,
+        hideColourLabels: !!state.svgHideColourLabels,
+        forPreview
+      };
+    }
+    function showCopyButtonFeedback(btn, success) {
+      if (!btn) return;
+      if (success) {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      } else {
+        btn.textContent = 'Copy failed';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      }
+    }
+
     function saveState() {
       try {
-        const themeColors = Array.from({ length: state.count }, (_, i) => toFullHex(state.colors[i]) || DEFAULTS[i]);
+        const themeColors = getThemeColorsFromState();
         const sentiment = (state.sentimentColors || []).map(toFullHex).filter(Boolean).slice(0, 3);
         const divergent = (state.divergentColors || []).map(toFullHex).filter(Boolean).slice(0, 3);
         const payload = {
@@ -1153,10 +1187,7 @@
 
     // URL fragment: share theme via full URL
     function stateToHashPayload() {
-      const themeColors = Array.from({ length: state.count }, (_, i) => {
-        const h = toFullHex(state.colors[i]) || DEFAULTS[i];
-        return h ? h.slice(1) : '000000';
-      });
+      const themeColors = getThemeColorsFromState().map(h => (h && h.length >= 7 ? h.slice(1) : '000000'));
       const payload = {
         n: (state.name || '').trim(),
         c: state.count,
@@ -1653,23 +1684,18 @@
 
     // ========= Theme JSON preview (Export & Import section) =========
     function buildThemeJsonPayload() {
-      const dataColors = [];
-      for (let i = 0; i < state.count; i++) {
-        const hex = toFullHex(state.colors[i]) || toFullHex(DEFAULTS[i]) || '#000000';
-        dataColors.push(hex);
-      }
       const payload = {
         name: (state.name || '').trim() || 'Custom',
-        dataColors
+        dataColors: getThemeColorsFromState()
       };
       if (state.sentimentEnabled) {
-        const sentiment = (state.sentimentColors || DEFAULTS_SENTIMENT).slice(0, 3).map((c, i) => toFullHex(c) || toFullHex(DEFAULTS_SENTIMENT[i]) || '#000000');
+        const sentiment = getSentimentColorsResolved();
         payload.good = sentiment[0];
         payload.center = sentiment[1];
         payload.bad = sentiment[2];
       }
       if (state.divergentEnabled) {
-        const divergent = (state.divergentColors || DEFAULTS_DIVERGENT).slice(0, 3).map((c, i) => toFullHex(c) || toFullHex(DEFAULTS_DIVERGENT[i]) || '#000000');
+        const divergent = getDivergentColorsResolved();
         payload.minimum = divergent[1];
         payload.neutral = divergent[0];
         payload.maximum = divergent[2];
@@ -1752,49 +1778,17 @@
           const payload = buildThemeJsonPayload();
           const raw = JSON.stringify(payload, null, 4);
           await navigator.clipboard.writeText(raw);
-          jsonCopyBtn.textContent = 'Copied!';
-          jsonCopyBtn.classList.add('copied');
-          setTimeout(() => {
-            jsonCopyBtn.textContent = 'Copy';
-            jsonCopyBtn.classList.remove('copied');
-          }, 2000);
+          showCopyButtonFeedback(jsonCopyBtn, true);
         } catch {
-          jsonCopyBtn.textContent = 'Copy failed';
-          setTimeout(() => { jsonCopyBtn.textContent = 'Copy'; }, 2000);
+          showCopyButtonFeedback(jsonCopyBtn, false);
         }
       });
     }
     if (svgCopyBtn) {
       svgCopyBtn.addEventListener('click', () => {
-        const themeColors = [];
-        for (let i = 0; i < state.count; i++) {
-          const hex = toFullHex(state.colors[i]) || toFullHex(DEFAULTS[i]) || '#000000';
-          themeColors.push(hex);
-        }
-        const sentiment = (state.sentimentColors || DEFAULTS_SENTIMENT).slice(0, 3).map((c, i) => toFullHex(c) || toFullHex(DEFAULTS_SENTIMENT[i]) || '#000000');
-        const divergent = (state.divergentColors || DEFAULTS_DIVERGENT).slice(0, 3).map((c, i) => toFullHex(c) || toFullHex(DEFAULTS_DIVERGENT[i]) || '#000000');
-        const svg = buildExportSvgString({
-          themeColors,
-          sentiment,
-          divergent,
-          themeName: state.name,
-          sentimentEnabled: state.sentimentEnabled,
-          divergentEnabled: state.divergentEnabled,
-          hideColourLabels: !!state.svgHideColourLabels,
-          forPreview: false
-        });
-        const done = () => {
-          svgCopyBtn.textContent = 'Copied!';
-          svgCopyBtn.classList.add('copied');
-          setTimeout(() => {
-            svgCopyBtn.textContent = 'Copy';
-            svgCopyBtn.classList.remove('copied');
-          }, 2000);
-        };
-        const fail = () => {
-          svgCopyBtn.textContent = 'Copy failed';
-          setTimeout(() => { svgCopyBtn.textContent = 'Copy'; }, 2000);
-        };
+        const svg = buildExportSvgString(buildExportSvgOptsFromState(false));
+        const done = () => showCopyButtonFeedback(svgCopyBtn, true);
+        const fail = () => showCopyButtonFeedback(svgCopyBtn, false);
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(svg).then(done).catch(() => {
             copySvgFallback(svg, done, fail);
@@ -2000,24 +1994,7 @@
     function updateSvgPreview() {
       if (!svgPreviewEl) return;
       try {
-        const themeColors = [];
-        for (let i = 0; i < state.count; i++) {
-          const hex = toFullHex(state.colors[i]) || toFullHex(DEFAULTS[i]) || '#000000';
-          themeColors.push(hex);
-        }
-        const sentiment = (state.sentimentColors || DEFAULTS_SENTIMENT).slice(0, 3).map((c, i) => toFullHex(c) || toFullHex(DEFAULTS_SENTIMENT[i]) || '#000000');
-        const divergent = (state.divergentColors || DEFAULTS_DIVERGENT).slice(0, 3).map((c, i) => toFullHex(c) || toFullHex(DEFAULTS_DIVERGENT[i]) || '#000000');
-        const svg = buildExportSvgString({
-          themeColors,
-          sentiment,
-          divergent,
-          themeName: state.name,
-          sentimentEnabled: state.sentimentEnabled,
-          divergentEnabled: state.divergentEnabled,
-          hideColourLabels: !!state.svgHideColourLabels,
-          forPreview: true
-        });
-        svgPreviewEl.innerHTML = svg;
+        svgPreviewEl.innerHTML = buildExportSvgString(buildExportSvgOptsFromState(true));
       } catch {
         svgPreviewEl.innerHTML = '';
       }
@@ -2039,16 +2016,7 @@
       const divergent = (state.divergentColors || []).slice(0, 3).map(c => toFullHex(c)).filter(Boolean);
       const themeName = (state.name || '').trim();
       const fileBase = sanitizeNameForFile(themeName) || 'palette';
-      const svg = buildExportSvgString({
-        themeColors,
-        sentiment,
-        divergent,
-        themeName: state.name,
-        sentimentEnabled: state.sentimentEnabled,
-        divergentEnabled: state.divergentEnabled,
-        hideColourLabels: !!state.svgHideColourLabels,
-        forPreview: false
-      });
+      const svg = buildExportSvgString({ ...buildExportSvgOptsFromState(false), themeColors });
       const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
