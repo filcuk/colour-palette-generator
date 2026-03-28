@@ -1,14 +1,11 @@
-import { createRequire } from 'node:module';
 import { describe, it, expect } from 'vitest';
-
-const require = createRequire(import.meta.url);
-const {
+import {
   buildExportSvgString,
   buildThemeJsonPayloadFromState,
   DEFAULTS,
   DEFAULTS_SENTIMENT,
   DEFAULTS_DIVERGENT
-} = require('../../lib/colour-export.js');
+} from '../../js/colour-export.js';
 
 function minimalState(overrides = {}) {
   return {

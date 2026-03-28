@@ -1,13 +1,16 @@
 {
   "name": "colour-palette-generator",
   "private": true,
+  "type": "module",
   "scripts": {
+    "start": "http-server . -p 8080 -c-1 -o",
+    "serve": "http-server . -p 8080 -c-1",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed",
-    "test:e2e:debug": "playwright test --debug"
+    "test:e2e": "playwright test -c playwright.config.mjs",
+    "test:e2e:ui": "playwright test -c playwright.config.mjs --ui",
+    "test:e2e:headed": "playwright test -c playwright.config.mjs --headed",
+    "test:e2e:debug": "playwright test -c playwright.config.mjs --debug"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",

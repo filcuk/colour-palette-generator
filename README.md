@@ -5,7 +5,34 @@ Link: [github.io/colour-palette-generator](https://filcuk.github.io/colour-palet
 ![Preview](res/example1.png)
 
 > [!IMPORTANT]
-> This project is almost entirely vibe-coded.
+> This project is almost entirely vibe-coded. Nearly 3000 lines of slop, held together by duct tape and a prayer.
+
+## Project layout
+
+| Path | Role |
+|------|------|
+| `index.html` | Page markup |
+| `css/styles.css` | Styles |
+| `js/main.js` | App entry: DOM refs, wiring, bootstrap |
+| `js/state.js` | Palette state, persistence, URL hash |
+| `js/ui.js` | Swatches, contrast summary, slider, optional rows, colour picker |
+| `js/themes.js` | Saved named themes (localStorage) |
+| `js/import-export.js` | JSON/SVG preview, copy, download, file + drag/drop import |
+| `js/colour-math.js` | Hex / RGB / HSV / CMYK / contrast helpers |
+| `js/colour-export.js` | JSON + SVG export (shared with unit tests) |
+
+## Run locally
+
+The page loads **ES modules** (`<script type="module" src="js/main.js">`). Most browsers **do not** allow module scripts from `file://` URLs, so opening `index.html` by double‑clicking it will fail with a console error like “Module source URI is not allowed in this document”.
+
+From the repo root:
+
+```bash
+npm install
+npm start
+```
+
+That serves the project on **http://127.0.0.1:8080** and opens your browser. To serve without opening a tab, use `npm run serve` instead.
 
 ## Features
 - **Variable colour count**
@@ -26,7 +53,7 @@ Link: [github.io/colour-palette-generator](https://filcuk.github.io/colour-palet
 
 ### Unit tests (Vitest)
 
-JSON and SVG export behaviour is implemented in `lib/colour-export.js` and covered by `tests/unit/export.test.js`.
+JSON and SVG export behaviour is implemented in `js/colour-export.js` and covered by `tests/unit/export.test.js`.
 
 | Command | What it does |
 |--------|----------------|
@@ -35,7 +62,7 @@ JSON and SVG export behaviour is implemented in `lib/colour-export.js` and cover
 
 ### End-to-end tests (Playwright)
 
-E2E tests live in `tests/e2e/`. Playwright starts a local static server for the repo root (so `index.html` and `lib/` are served automatically); you do not need a separate dev server.
+E2E tests live in `tests/e2e/`. Playwright starts a local static server for the repo root (so `index.html` and `js/` are served automatically); you do not need a separate dev server.
 
 **One-time setup**
 
