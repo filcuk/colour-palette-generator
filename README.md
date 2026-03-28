@@ -8,7 +8,6 @@ Link: [github.io/colour-palette-generator](https://filcuk.github.io/colour-palet
 > This project is almost entirely vibe-coded.
 
 ## Features
-- **Single self-contained file**, all client-side
 - **Variable colour count**
 - **Optional subsets** for sentiment and divergent colours
 - **Various input options**: HEX, RGB, CYMK, colour picker, colour sets
