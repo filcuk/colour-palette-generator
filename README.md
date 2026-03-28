@@ -20,11 +20,22 @@ Link: [github.io/colour-palette-generator](https://filcuk.github.io/colour-palet
 > [!TIP]
 > Tested on Firefox. Please submit any issues or suggestions [here](https://github.com/filcuk/colour-palette-generator/issues).
 
-## Testing (Playwright)
-
-End-to-end tests live in `tests/e2e/`. Playwright starts a local static server for the repo root (so `index.html` is served automatically); you do not need to run a separate dev server.
+## Testing
 
 **Prerequisites:** [Node.js](https://nodejs.org/) (includes `npm`).
+
+### Unit tests (Vitest)
+
+JSON and SVG export behaviour is implemented in `lib/colour-export.js` and covered by `tests/unit/export.test.js`.
+
+| Command | What it does |
+|--------|----------------|
+| `npm run test` | Run unit tests once (CI default). |
+| `npm run test:watch` | Re-run unit tests when files change. |
+
+### End-to-end tests (Playwright)
+
+E2E tests live in `tests/e2e/`. Playwright starts a local static server for the repo root (so `index.html` and `lib/` are served automatically); you do not need a separate dev server.
 
 **One-time setup**
 
@@ -33,8 +44,6 @@ npm install
 npx playwright install chromium
 ```
 
-**Run tests**
-
 | Command | What it does |
 |--------|----------------|
 | `npm run test:e2e` | Run all E2E tests (headless Chromium). |
@@ -42,9 +51,9 @@ npx playwright install chromium
 | `npm run test:e2e:headed` | Run with a visible browser window. |
 | `npm run test:e2e:debug` | Step through tests with the Playwright inspector. |
 
-After a run, an HTML report may be generated under `playwright-report/` (open `index.html` in a browser to view it).
+After an E2E run, an HTML report may appear under `playwright-report/` (open `index.html` in a browser to view it).
 
-**CI:** Pushes and pull requests to `main` / `master` run the same suite via GitHub Actions (`.github/workflows/playwright.yml`). Failed runs upload the Playwright report as an artifact.
+**CI:** Pushes and pull requests to `main` / `master` run unit tests and E2E tests via GitHub Actions (`.github/workflows/playwright.yml`). Failed E2E runs upload the Playwright report as an artifact.
 
 ## Credit
 Logo image: <a href="https://www.flaticon.com/free-icons/color-palette" title="color palette icons">Color palette icons created by Freepik - Flaticon</a>

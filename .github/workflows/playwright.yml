@@ -18,6 +18,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm install
+      - name: Unit tests
+        run: npm run test
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
       - name: Run E2E tests

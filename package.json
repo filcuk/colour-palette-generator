@@ -2,6 +2,8 @@
   "name": "colour-palette-generator",
   "private": true,
   "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
@@ -9,6 +11,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",
-    "http-server": "^14.1.1"
+    "http-server": "^14.1.1",
+    "vitest": "^3.0.5"
   }
 }
