@@ -24,6 +24,7 @@ export function initUi(refs, themesApi, ioApi) {
     rowDivergentWrapEl,
     sentimentEnabledCb,
     divergentEnabledCb,
+    divergentNullEnabledCb,
     countSlider,
     countValue,
     summaryEl,
@@ -50,14 +51,30 @@ let sentimentWraps = [], sentimentInputs = [], sentimentBadgesWraps = [];
 let divergentWraps = [], divergentInputs = [], divergentBadgesWraps = [];
 let ph = 0, ps = 1, pv = 1; // picker HSV
 // ========= Rendering =========
-function swatchHTML(section, i, value, ariaLabel) {
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** @param {string} [meaningLabel] — when set, shown above the swatch (Sentiment / Divergent). */
+function swatchHTML(section, i, value, ariaLabel, meaningLabel) {
   const vAttr = value ? ` value="${value}"` : '';
   const isActive = state.activeSection === section && state.activeIndex === i;
   const activeCls = isActive ? ' active' : '';
   const label = ariaLabel || `${section} color ${i + 1}`;
+  const labelEsc = escapeHtml(label);
+  const optionalCls = meaningLabel != null && meaningLabel !== '' ? ' swatch-wrap--labeled' : '';
+  const meaningSpan =
+    meaningLabel != null && meaningLabel !== ''
+      ? `<span class="swatch-meaning-label">${escapeHtml(meaningLabel)}</span>`
+      : '';
   return `
-    <div class="swatch-wrap${activeCls}" data-section="${section}" data-index="${i}">
-      <input class="swatch-input" aria-label="${label}" placeholder="#RRGGBB"${vAttr} data-section="${section}" data-index="${i}" />
+    <div class="swatch-wrap${activeCls}${optionalCls}" data-section="${section}" data-index="${i}">
+      ${meaningSpan}
+      <input class="swatch-input" aria-label="${labelEsc}" placeholder="#RRGGBB"${vAttr} data-section="${section}" data-index="${i}" />
       <div class="swatch-contrast" aria-hidden="true" title=""></div>
     </div>
   `;
@@ -119,10 +136,10 @@ function renderSwatches(n) {
 function renderSentimentSwatches() {
   if (!rowSentimentEl) return;
   let html = '';
-  const labels = ['Negative', 'Neutral', 'Positive'];
+  const labels = ['Good', 'Neutral', 'Bad'];
   for (let i = 0; i < 3; i++) {
     const val = toFullHex(state.sentimentColors[i]) || '';
-    html += swatchHTML('sentiment', i, val, labels[i]);
+    html += swatchHTML('sentiment', i, val, labels[i], labels[i]);
   }
   rowSentimentEl.innerHTML = html;
   sentimentWraps = Array.from(rowSentimentEl.querySelectorAll('.swatch-wrap'));
@@ -136,10 +153,11 @@ function renderSentimentSwatches() {
 function renderDivergentSwatches() {
   if (!rowDivergentEl) return;
   let html = '';
-  const labels = ['Low', 'Mid', 'High'];
-  for (let i = 0; i < 3; i++) {
+  const labels = ['Maximum', 'Center', 'Minimum', 'null'];
+  const n = state.divergentNullEnabled !== false ? 4 : 3;
+  for (let i = 0; i < n; i++) {
     const val = toFullHex(state.divergentColors[i]) || '';
-    html += swatchHTML('divergent', i, val, labels[i]);
+    html += swatchHTML('divergent', i, val, labels[i], labels[i]);
   }
   rowDivergentEl.innerHTML = html;
   divergentWraps = Array.from(rowDivergentEl.querySelectorAll('.swatch-wrap'));
@@ -180,7 +198,14 @@ function updateActiveClass() {
 }
 
 function setActive(section, index) {
-  const maxIdx = section === 'theme' ? state.count - 1 : 2;
+  const maxIdx =
+    section === 'theme'
+      ? state.count - 1
+      : section === 'divergent'
+        ? state.divergentNullEnabled !== false
+          ? 3
+          : 2
+        : 2;
   const i = Math.max(0, Math.min(maxIdx, index));
   state.activeSection = section;
   state.activeIndex = i;
@@ -276,10 +301,14 @@ function updateSummary() {
 function updateOptionalSectionsVisibility() {
   if (sentimentEnabledCb) sentimentEnabledCb.checked = !!state.sentimentEnabled;
   if (divergentEnabledCb) divergentEnabledCb.checked = !!state.divergentEnabled;
+  if (divergentNullEnabledCb) divergentNullEnabledCb.checked = state.divergentNullEnabled !== false;
   if (rowSentimentWrapEl) rowSentimentWrapEl.classList.toggle('optional-hidden', !state.sentimentEnabled);
   if (rowDivergentWrapEl) rowDivergentWrapEl.classList.toggle('optional-hidden', !state.divergentEnabled);
   if (state.activeSection === 'sentiment' && !state.sentimentEnabled) setActive('theme', 0);
   if (state.activeSection === 'divergent' && !state.divergentEnabled) setActive('theme', 0);
+  if (state.activeSection === 'divergent' && state.divergentNullEnabled === false && state.activeIndex > 2) {
+    setActive('divergent', 2);
+  }
 }
 
 // ========= Slider (1–16), Theme name =========
@@ -314,6 +343,20 @@ if (sentimentEnabledCb) {
 if (divergentEnabledCb) {
   divergentEnabledCb.addEventListener('change', () => {
     state.divergentEnabled = divergentEnabledCb.checked;
+    updateOptionalSectionsVisibility();
+    updateSummary();
+    saveState();
+    ioApi.updateJsonPreview();
+    ioApi.updateSvgPreview();
+  });
+}
+if (divergentNullEnabledCb) {
+  divergentNullEnabledCb.addEventListener('change', () => {
+    state.divergentNullEnabled = divergentNullEnabledCb.checked;
+    if (state.activeSection === 'divergent' && !state.divergentNullEnabled && state.activeIndex > 2) {
+      setActive('divergent', 2);
+    }
+    renderDivergentSwatches();
     updateOptionalSectionsVisibility();
     updateSummary();
     saveState();

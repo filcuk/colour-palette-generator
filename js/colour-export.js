@@ -6,8 +6,10 @@ export const DEFAULTS = [
   '#FF6B6B', '#F7C948', '#4ECDC4', '#556CD6', '#2E3A59', '#1B998B', '#E76F51', '#264653',
   '#8E44AD', '#27AE60', '#D35400', '#3498DB', '#E84393', '#16A085', '#C0392B', '#7F8C8D'
 ];
+/** State order + JSON keys: good, neutral, bad */
 export const DEFAULTS_SENTIMENT = ['#E53935', '#757575', '#43A047'];
-export const DEFAULTS_DIVERGENT = ['#2166AC', '#F7F7F7', '#B2182B'];
+/** State order + JSON keys: maximum, center, minimum, "null" */
+export const DEFAULTS_DIVERGENT = ['#B2182B', '#F7F7F7', '#2166AC', '#757575'];
 
 const clampHex = s => s.replace(/[^0-9a-f]/gi, '').slice(0, 6).toUpperCase();
 function toFullHex(raw) {
@@ -51,7 +53,7 @@ function getSentimentColorsResolved(s) {
     toFullHex(c) || toFullHex(DEFAULTS_SENTIMENT[i]) || '#000000');
 }
 function getDivergentColorsResolved(s) {
-  return (s.divergentColors || DEFAULTS_DIVERGENT).slice(0, 3).map((c, i) =>
+  return (s.divergentColors || DEFAULTS_DIVERGENT).slice(0, 4).map((c, i) =>
     toFullHex(c) || toFullHex(DEFAULTS_DIVERGENT[i]) || '#000000');
 }
 
@@ -63,14 +65,15 @@ export function buildThemeJsonPayloadFromState(s) {
   if (s.sentimentEnabled) {
     const sentiment = getSentimentColorsResolved(s);
     payload.good = sentiment[0];
-    payload.center = sentiment[1];
+    payload.neutral = sentiment[1];
     payload.bad = sentiment[2];
   }
   if (s.divergentEnabled) {
     const divergent = getDivergentColorsResolved(s);
-    payload.minimum = divergent[1];
-    payload.neutral = divergent[0];
-    payload.maximum = divergent[2];
+    payload.maximum = divergent[0];
+    payload.center = divergent[1];
+    payload.minimum = divergent[2];
+    if (s.divergentNullEnabled !== false) payload['null'] = divergent[3];
   }
   return payload;
 }
@@ -91,13 +94,15 @@ export function buildExportSvgString(opts) {
   const sw = 80, sh = 40, gap = 8, rowGap = 8, pad = 8;
   const rowLabelWidth = 80;
   const hasSentiment = sentimentEnabled && sentiment.length === 3;
-  const hasDivergent = divergentEnabled && divergent.length === 3;
+  const hasDivergent = divergentEnabled && divergent.length >= 3;
+  const hasDivergentNullSwatch = hasDivergent && divergent.length === 4;
   const numRows = 1 + (hasSentiment ? 1 : 0) + (hasDivergent ? 1 : 0);
   const col2StartX = pad + rowLabelWidth + gap;
   const gradientWidth = 2 * sw + gap;
   const gradientX = col2StartX + 3 * (sw + gap);
   const themeRowWidth = 2 * pad + count * sw + (count - 1) * gap;
-  const optionalRowWidth = 2 * pad + rowLabelWidth + gap + 3 * (sw + gap) + gap + gradientWidth;
+  const baseOptionalRowWidth = 2 * pad + rowLabelWidth + gap + 3 * (sw + gap) + gap + gradientWidth;
+  const optionalRowWidth = baseOptionalRowWidth + (hasDivergentNullSwatch ? gap + sw : 0);
   let width = themeRowWidth;
   if (hasSentiment || hasDivergent) {
     width = Math.max(themeRowWidth, optionalRowWidth);
@@ -109,10 +114,11 @@ export function buildExportSvgString(opts) {
   <text x="${pad}" y="${startY + sh / 2 + 2}" text-anchor="start" dominant-baseline="middle" font-size="17" fill="#555" font-family="sans-serif">${text}</text>`;
   }
 
-  function swatchNodes(colors, startY, rolePrefix, startX) {
+  function swatchNodes(colors, startY, rolePrefix, startX, indexOffset = 0) {
     const baseX = startX !== undefined ? startX : col2StartX;
     let out = '';
     colors.forEach((hex, i) => {
+      const idx = indexOffset + i;
       const x = baseX + i * (sw + gap);
       const txtColor = autoTextOn(hex);
       const rBlack = contrastRatio('#000000', hex).toFixed(2);
@@ -124,19 +130,25 @@ export function buildExportSvgString(opts) {
               font-family="monospace" font-size="16" fill="${txtColor}"
               data-role="label">${hex}</text>`;
       out += `
-          <g data-index="${i}" data-role="${rolePrefix}">
+          <g data-index="${idx}" data-role="${rolePrefix}">
             <rect x="${x}" y="${startY}" width="${sw}" height="${sh}" rx="10"
               fill="${hex}" stroke="rgba(0,0,0,0.15)"
               data-role="swatch" data-hex="${hex}"/>${labelEl}
-            <title>Swatch ${i + 1}: ${hex} — Contrast vs Black ${rBlack}:1 (${passB ? 'PASS' : 'FAIL'}), vs White ${rWhite}:1 (${passW ? 'PASS' : 'FAIL'})</title>
+            <title>Swatch ${idx + 1}: ${hex} — Contrast vs Black ${rBlack}:1 (${passB ? 'PASS' : 'FAIL'}), vs White ${rWhite}:1 (${passW ? 'PASS' : 'FAIL'})</title>
           </g>`;
     });
     return out;
   }
 
   function gradientBox(colors, startY, gradientId) {
-    if (!colors || colors.length !== 3) return '';
-    const stops = colors.map((hex, i) => `<stop offset="${i === 0 ? 0 : i === 1 ? 0.5 : 1}" stop-color="${hex}"/>`).join('\n    ');
+    if (!colors || colors.length < 3) return '';
+    const n = colors.length;
+    const stops = colors
+      .map((hex, i) => {
+        const offset = n <= 1 ? 0 : i / (n - 1);
+        return `<stop offset="${offset}" stop-color="${hex}"/>`;
+      })
+      .join('\n    ');
     return `
   <defs>
     <linearGradient id="${gradientId}" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
@@ -157,19 +169,25 @@ export function buildExportSvgString(opts) {
   }
   if (hasDivergent) {
     const divergentY = pad + rowIndex * (sh + rowGap);
+    const divGradient = divergent.slice(0, 3);
     nodes += rowLabel('Divergent', divergentY);
-    nodes += swatchNodes(divergent, divergentY, 'divergent', col2StartX);
-    nodes += gradientBox(divergent, divergentY, 'divergent-gradient');
+    nodes += swatchNodes(divGradient, divergentY, 'divergent', col2StartX);
+    nodes += gradientBox(divGradient, divergentY, 'divergent-gradient');
+    if (hasDivergentNullSwatch) {
+      const nullHex = divergent[3];
+      const nullSwatchX = gradientX + gradientWidth + gap;
+      nodes += swatchNodes([nullHex], divergentY, 'divergent', nullSwatchX, 3);
+    }
   }
 
   const meta = {
     app: 'colour-palette',
-    version: 6,
+    version: 7,
     name: (themeName || '').trim(),
     count,
     colors: themeColors,
     ...(sentimentEnabled && sentiment.length === 3 ? { sentimentColors: sentiment } : {}),
-    ...(divergentEnabled && divergent.length === 3 ? { divergentColors: divergent } : {})
+    ...(divergentEnabled && divergent.length >= 3 ? { divergentColors: divergent } : {})
   };
   const svgStyle = forPreview ? ' style="max-width:100%;height:auto"' : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${safeTitle}"${svgStyle}>

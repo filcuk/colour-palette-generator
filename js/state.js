@@ -17,6 +17,8 @@ export const state = {
   divergentColors: DEFAULTS_DIVERGENT.slice(),
   sentimentEnabled: false,
   divergentEnabled: false,
+  /** When false, the null swatch is hidden and omitted from Power BI JSON / SVG. */
+  divergentNullEnabled: true,
   svgHideColourLabels: false,
   activeSection: 'theme',
   activeIndex: 0
@@ -31,14 +33,26 @@ export function getSentimentColorsResolved() {
     toFullHex(c) || toFullHex(DEFAULTS_SENTIMENT[i]) || '#000000');
 }
 export function getDivergentColorsResolved() {
-  return (state.divergentColors || DEFAULTS_DIVERGENT).slice(0, 3).map((c, i) =>
+  return (state.divergentColors || DEFAULTS_DIVERGENT).slice(0, 4).map((c, i) =>
     toFullHex(c) || toFullHex(DEFAULTS_DIVERGENT[i]) || '#000000');
 }
+
+/** Legacy state order [center, minimum, maximum, null] → [maximum, center, minimum, null]. */
+export function migrateLegacyDivergentOrder(colors) {
+  if (!Array.isArray(colors) || colors.length < 4) return DEFAULTS_DIVERGENT.slice();
+  const h = [0, 1, 2, 3].map(i => toFullHex(colors[i]) || DEFAULTS_DIVERGENT[i]);
+  return [h[2], h[0], h[1], h[3]];
+}
 export function buildExportSvgOptsFromState(forPreview) {
+  const fullDiv = getDivergentColorsResolved();
+  const divergentForExport =
+    state.divergentEnabled && state.divergentNullEnabled === false
+      ? fullDiv.slice(0, 3)
+      : fullDiv;
   return {
     themeColors: getThemeColorsFromState(),
     sentiment: getSentimentColorsResolved(),
-    divergent: getDivergentColorsResolved(),
+    divergent: divergentForExport,
     themeName: state.name,
     sentimentEnabled: state.sentimentEnabled,
     divergentEnabled: state.divergentEnabled,
@@ -60,15 +74,17 @@ export function saveState(options = {}) {
   try {
     const themeColors = getThemeColorsFromState();
     const sentiment = (state.sentimentColors || []).map(toFullHex).filter(Boolean).slice(0, 3);
-    const divergent = (state.divergentColors || []).map(toFullHex).filter(Boolean).slice(0, 3);
+    const divergent = getDivergentColorsResolved();
     const payload = {
       count: state.count,
       name: state.name || '',
       colors: themeColors,
       sentimentColors: sentiment.length === 3 ? sentiment : DEFAULTS_SENTIMENT.slice(),
-      divergentColors: divergent.length === 3 ? divergent : DEFAULTS_DIVERGENT.slice(),
+      divergentColors: divergent.slice(),
+      divergentOrder: 'mcmn',
       sentimentEnabled: !!state.sentimentEnabled,
       divergentEnabled: !!state.divergentEnabled,
+      divergentNullEnabled: state.divergentNullEnabled !== false,
       svgHideColourLabels: !!state.svgHideColourLabels
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -88,17 +104,26 @@ export function loadState() {
     const sentimentColors = Array.isArray(data.sentimentColors) && data.sentimentColors.length === 3
       ? data.sentimentColors.map(toFullHex).filter(Boolean).slice(0, 3)
       : DEFAULTS_SENTIMENT.slice();
-    const divergentColors = Array.isArray(data.divergentColors) && data.divergentColors.length === 3
-      ? data.divergentColors.map(toFullHex).filter(Boolean).slice(0, 3)
-      : DEFAULTS_DIVERGENT.slice();
+    let divergentColors = DEFAULTS_DIVERGENT.slice();
+    if (Array.isArray(data.divergentColors) && data.divergentColors.length >= 3) {
+      for (let i = 0; i < Math.min(4, data.divergentColors.length); i++) {
+        const h = toFullHex(data.divergentColors[i]);
+        if (h) divergentColors[i] = h;
+      }
+    }
+    if (data.divergentOrder !== 'mcmn' && Array.isArray(data.divergentColors) && data.divergentColors.length >= 4) {
+      divergentColors = migrateLegacyDivergentOrder(divergentColors);
+    }
     return {
       count,
       name: (data.name || '').toString(),
       colors,
       sentimentColors,
       divergentColors,
+      divergentOrder: 'mcmn',
       sentimentEnabled: data.sentimentEnabled === true,
       divergentEnabled: data.divergentEnabled === true,
+      divergentNullEnabled: data.divergentNullEnabled !== false,
       svgHideColourLabels: data.svgHideColourLabels === true
     };
   } catch { return null; }
@@ -116,8 +141,10 @@ function stateToHashPayload() {
     payload.se = true;
   }
   if (state.divergentEnabled) {
-    payload.dv = (state.divergentColors || DEFAULTS_DIVERGENT).slice(0, 3).map(c => (toFullHex(c) || '').slice(1) || '000000');
+    payload.dv = (state.divergentColors || DEFAULTS_DIVERGENT).slice(0, 4).map(c => (toFullHex(c) || '').slice(1) || '000000');
     payload.de = true;
+    payload.dvV = 2;
+    if (state.divergentNullEnabled === false) payload.dn = false;
   }
   return payload;
 }
@@ -129,17 +156,27 @@ function hashPayloadToStoredShape(p) {
   const sentimentColors = Array.isArray(p.s) && p.s.length === 3
     ? p.s.map(x => typeof x === 'string' && x.length >= 6 ? '#' + x.replace(/^#/, '').slice(0, 6) : null).filter(Boolean)
     : DEFAULTS_SENTIMENT.slice();
-  const divergentColors = Array.isArray(p.dv) && p.dv.length === 3
-    ? p.dv.map(x => typeof x === 'string' && x.length >= 6 ? '#' + x.replace(/^#/, '').slice(0, 6) : null).filter(Boolean)
-    : DEFAULTS_DIVERGENT.slice();
+  let divergentColors = DEFAULTS_DIVERGENT.slice();
+  if (Array.isArray(p.dv) && p.dv.length >= 3) {
+    for (let i = 0; i < Math.min(4, p.dv.length); i++) {
+      const x = p.dv[i];
+      const h = typeof x === 'string' && x.length >= 6 ? '#' + x.replace(/^#/, '').slice(0, 6) : null;
+      if (h) divergentColors[i] = h;
+    }
+  }
+  if (p.de === true && p.dvV !== 2 && Array.isArray(p.dv) && p.dv.length >= 4) {
+    divergentColors = migrateLegacyDivergentOrder(divergentColors);
+  }
   return {
     count,
     name: clampThemeName(p.n != null ? String(p.n) : ''),
     colors: colors.length ? colors : [DEFAULTS[0]],
     sentimentColors: sentimentColors.length === 3 ? sentimentColors : DEFAULTS_SENTIMENT.slice(),
-    divergentColors: divergentColors.length === 3 ? divergentColors : DEFAULTS_DIVERGENT.slice(),
+    divergentColors: divergentColors.length === 4 ? divergentColors : DEFAULTS_DIVERGENT.slice(),
+    divergentOrder: p.de === true ? 'mcmn' : undefined,
     sentimentEnabled: p.se === true,
-    divergentEnabled: p.de === true
+    divergentEnabled: p.de === true,
+    divergentNullEnabled: p.de === true ? p.dn !== false : undefined
   };
 }
 function encodeHashPayload(payload) {
@@ -212,10 +249,21 @@ export function mergeStoredIntoState(stored) {
   }
   if (stored.sentimentColors && stored.sentimentColors.length === 3)
     state.sentimentColors = stored.sentimentColors.slice();
-  if (stored.divergentColors && stored.divergentColors.length === 3)
-    state.divergentColors = stored.divergentColors.slice();
+  if (stored.divergentColors && stored.divergentColors.length >= 3) {
+    const next = DEFAULTS_DIVERGENT.slice();
+    const src = stored.divergentColors.slice(0, 4);
+    for (let i = 0; i < src.length; i++) {
+      const h = toFullHex(src[i]);
+      if (h) next[i] = h;
+    }
+    state.divergentColors =
+      stored.divergentOrder !== 'mcmn' && src.length >= 4
+        ? migrateLegacyDivergentOrder(next)
+        : next;
+  }
   if (stored.sentimentEnabled !== undefined) state.sentimentEnabled = stored.sentimentEnabled === true;
   if (stored.divergentEnabled !== undefined) state.divergentEnabled = stored.divergentEnabled === true;
+  if (stored.divergentNullEnabled !== undefined) state.divergentNullEnabled = stored.divergentNullEnabled === true;
   if (stored.svgHideColourLabels !== undefined) state.svgHideColourLabels = stored.svgHideColourLabels === true;
 }
 
@@ -254,6 +302,7 @@ export function resetStateData() {
   state.divergentColors = DEFAULTS_DIVERGENT.slice();
   state.sentimentEnabled = false;
   state.divergentEnabled = false;
+  state.divergentNullEnabled = true;
   state.svgHideColourLabels = false;
   state.activeSection = 'theme';
   state.activeIndex = 0;

@@ -1,7 +1,7 @@
-# <img src="res/logo.png" width="32"> Colour Palette Generator: [Launch](https://filcuk.github.io/colour-palette-generator/)
-![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/filcuk/colour-palette-generator)
- ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/filcuk/colour-palette-generator)
- ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/filcuk/colour-palette-generator/playwright.yml?label=tests) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/filcuk/colour-palette-generator/pages%2Fpages-build-deployment?label=deployment)
+# <img src="res/logo.png" width="32"> Colour Palette Generator: [Launch](https://filcuk.github.io/pbi-theme-customiser/)
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/filcuk/pbi-theme-customiser)
+ ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/filcuk/pbi-theme-customiser)
+ ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/filcuk/pbi-theme-customiser/playwright.yml?label=tests) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/filcuk/pbi-theme-customiser/pages%2Fpages-build-deployment?label=deployment)
 
 > [!IMPORTANT]
 > This project is almost entirely vibe-coded.
@@ -20,7 +20,7 @@ A theme/colour palette generator, predominantly for use in [MS Power BI](https:/
 - **🔗 Easy sharing** by forwarding the URL, which stores the state of the current palette
 
 > [!TIP]
-> Tested on Firefox. Please submit any issues or suggestions [here](https://github.com/filcuk/colour-palette-generator/issues).
+> Tested on Firefox. Please submit any issues or suggestions [here](https://github.com/filcuk/pbi-theme-customiser/issues).
 
 ![Preview](res/example1.png)
 

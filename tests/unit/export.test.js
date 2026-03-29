@@ -34,11 +34,12 @@ describe('buildThemeJsonPayloadFromState', () => {
     expect(p.dataColors).toHaveLength(2);
     expect(p.dataColors[0]).toBe('#111111');
     expect(p.good).toBeDefined();
-    expect(p.center).toBeDefined();
-    expect(p.bad).toBeDefined();
     expect(p.neutral).toBeDefined();
-    expect(p.minimum).toBeDefined();
+    expect(p.bad).toBeDefined();
     expect(p.maximum).toBeDefined();
+    expect(p.center).toBeDefined();
+    expect(p.minimum).toBeDefined();
+    expect(p['null']).toBeDefined();
   });
 
   it('uses default name when empty', () => {
@@ -50,6 +51,16 @@ describe('buildThemeJsonPayloadFromState', () => {
     const p = buildThemeJsonPayloadFromState(minimalState());
     expect(p).not.toHaveProperty('good');
     expect(p).not.toHaveProperty('neutral');
+  });
+
+  it('omits null key when divergent null is disabled', () => {
+    const p = buildThemeJsonPayloadFromState(
+      minimalState({ divergentEnabled: true, divergentNullEnabled: false })
+    );
+    expect(p.maximum).toBeDefined();
+    expect(p.center).toBeDefined();
+    expect(p.minimum).toBeDefined();
+    expect(p).not.toHaveProperty('null');
   });
 });
 
@@ -73,7 +84,7 @@ describe('buildExportSvgString', () => {
     expect(metaMatch).toBeTruthy();
     const meta = JSON.parse(metaMatch[1]);
     expect(meta.app).toBe('colour-palette');
-    expect(meta.version).toBe(6);
+    expect(meta.version).toBe(7);
     expect(meta.colors).toEqual(themeColors);
     expect(meta.name).toBe('Unit');
   });
@@ -120,5 +131,23 @@ describe('buildExportSvgString', () => {
     expect(svg).toContain('>Divergent<');
     expect(svg).toContain('sentiment-gradient');
     expect(svg).toContain('divergent-gradient');
+  });
+
+  it('divergent row without fourth null swatch when only three colours passed', () => {
+    const three = DEFAULTS_DIVERGENT.slice(0, 3);
+    const svg = buildExportSvgString({
+      themeColors: ['#111111'],
+      sentiment: [],
+      divergent: three,
+      themeName: 'Div3',
+      sentimentEnabled: false,
+      divergentEnabled: true,
+      hideColourLabels: false,
+      forPreview: false
+    });
+    const metaMatch = svg.match(/<metadata id="palette-meta">([\s\S]*?)<\/metadata>/);
+    expect(metaMatch).toBeTruthy();
+    const meta = JSON.parse(metaMatch[1]);
+    expect(meta.divergentColors).toHaveLength(3);
   });
 });
