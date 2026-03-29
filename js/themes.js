@@ -3,6 +3,7 @@ import {
   allocateDuplicateThemeName,
   allocateNumberedThemeNameFromBase,
   clampThemeName,
+  numberingBaseFromThemeName,
   resolveThemeNameAgainstSavedList
 } from './theme-name.js';
 import { showToast } from './toasts.js';
@@ -23,6 +24,9 @@ export let themeDirty = false;
 
 /** Index of the saved theme last applied or created; drives rename-in-place for the combobox. */
 let activeSavedThemeIndex = -1;
+
+/** Dedupe auto-save of the same shared URL in one tab session (refresh). */
+const SESSION_LAST_SHARED_HASH_KEY = 'colour-palette.lastSharedUrlHash';
 
 export function setActiveSavedThemeIndex(i) {
   activeSavedThemeIndex = typeof i === 'number' && i >= 0 ? i : -1;
@@ -207,6 +211,54 @@ export function createThemesController(refs, getUi, io, opts = {}) {
     refreshSavedThemesUI(name);
     themeDirty = false;
     updateThemeStatus();
+  }
+
+  /**
+   * After palette state was applied from the URL hash, append it as a new saved theme
+   * (unique name) so it does not fight an existing selection. Skips if this hash was
+   * already committed in this session (same tab, same URL — e.g. refresh).
+   */
+  function commitSharedUrlPaletteAsNewSavedTheme() {
+    const h = typeof location !== 'undefined' ? location.hash || '' : '';
+    if (!h || h.length < 2) return;
+    try {
+      if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(SESSION_LAST_SHARED_HASH_KEY) === h) {
+        return;
+      }
+    } catch {
+      /* private mode */
+    }
+
+    const ui = getUi();
+    if (!ui || !ui.inputs) return;
+
+    const taken = new Set(savedThemes.map(t => t.name).filter(Boolean));
+    const base = clampThemeName(state.name || '') || 'Shared';
+    const finalName = taken.has(base)
+      ? allocateDuplicateThemeName(base, taken) ??
+        allocateNumberedThemeNameFromBase(numberingBaseFromThemeName(base), taken) ??
+        `${base} 1`
+      : base;
+
+    const payload = buildCurrentThemePayload(finalName);
+    if (!payload) return;
+
+    suppressAutoThemeSave = true;
+    savedThemes.push(payload);
+    saveSavedThemes(savedThemes);
+    state.name = finalName;
+    if (themeNameEl) themeNameEl.value = finalName;
+    refreshSavedThemesUI(finalName);
+    setActiveSavedThemeIndex(savedThemes.length - 1);
+    suppressAutoThemeSave = false;
+    setThemeDirty(false);
+    updateThemeStatus();
+    saveState({ skipHashUpdate: true });
+    try {
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(SESSION_LAST_SHARED_HASH_KEY, h);
+    } catch {
+      /* ignore */
+    }
   }
 
   function applySavedTheme(theme) {
@@ -410,6 +462,7 @@ export function createThemesController(refs, getUi, io, opts = {}) {
     autoSaveThemeIfNamed,
     applySavedTheme,
     ensureInitialThemeIfEmpty,
+    commitSharedUrlPaletteAsNewSavedTheme,
     setActiveSavedThemeIndex,
     syncActiveSavedThemeToFieldName,
     deleteCurrentSavedTheme

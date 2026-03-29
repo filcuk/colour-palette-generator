@@ -124,15 +124,10 @@ function scheduleApplyStateFromUrl() {
     dangerArms?.clear();
     const fromHashNow = readStateFromHash();
     if (fromHashNow) {
-      const hashName = clampThemeName(fromHashNow.name || '');
-      const curName = clampThemeName(state.name || '');
-      if (hashName !== curName) {
-        replaceHashFromStateNow();
-        saveState({ skipHashUpdate: true });
-        return;
-      }
       ui.applyStoredState(fromHashNow);
       saveState();
+      replaceHashFromStateNow();
+      themes.commitSharedUrlPaletteAsNewSavedTheme();
     }
   });
 }
@@ -153,7 +148,9 @@ if (pickerSetSelect) {
   ui.showPickerSubsection('basic');
 }
 
-themes.ensureInitialThemeIfEmpty();
+if (!fromHash) {
+  themes.ensureInitialThemeIfEmpty();
+}
 themes.syncActiveSavedThemeToFieldName();
 themes.refreshSavedThemesUI(clampThemeName(refs.themeNameEl ? refs.themeNameEl.value : ''));
 themes.updateThemeStatus();
@@ -162,4 +159,7 @@ io.updateSvgPreview();
 saveState();
 replaceHashFromStateNow();
 enableHashHistoryPush();
+if (fromHash) {
+  themes.commitSharedUrlPaletteAsNewSavedTheme();
+}
 
