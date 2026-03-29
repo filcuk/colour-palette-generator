@@ -148,7 +148,7 @@ function stateToHashPayload() {
   }
   return payload;
 }
-function hashPayloadToStoredShape(p) {
+export function hashPayloadToStoredShape(p) {
   if (!p || !Array.isArray(p.d) || !p.d.length) return null;
   const count = Math.max(1, Math.min(16, parseInt(p.c, 10) || 8));
   const colors = p.d.slice(0, 16).map(x => typeof x === 'string' && x.length >= 6 ? '#' + x.replace(/^#/, '').slice(0, 6) : null).filter(Boolean);
@@ -164,7 +164,8 @@ function hashPayloadToStoredShape(p) {
       if (h) divergentColors[i] = h;
     }
   }
-  if (p.de === true && p.dvV !== 2 && Array.isArray(p.dv) && p.dv.length >= 4) {
+  /** Only dvV === 1 is legacy [center, min, max, null]. Missing dvV or dvV === 2 is mcmn — do not migrate (avoids swapping center/minimum on shared URLs). */
+  if (p.de === true && p.dvV === 1 && Array.isArray(p.dv) && p.dv.length >= 4) {
     divergentColors = migrateLegacyDivergentOrder(divergentColors);
   }
   return {
@@ -179,14 +180,14 @@ function hashPayloadToStoredShape(p) {
     divergentNullEnabled: p.de === true ? p.dn !== false : undefined
   };
 }
-function encodeHashPayload(payload) {
+export function encodeHashPayload(payload) {
   const json = JSON.stringify(payload);
   const bytes = new TextEncoder().encode(json);
   let binary = '';
   for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
-function decodeHashPayload(hashStr) {
+export function decodeHashPayload(hashStr) {
   try {
     const base64 = (hashStr || '').replace(/^#/, '').replace(/-/g, '+').replace(/_/g, '/');
     if (!base64) return null;
@@ -263,7 +264,9 @@ export function mergeStoredIntoState(stored) {
   }
   if (stored.sentimentEnabled !== undefined) state.sentimentEnabled = stored.sentimentEnabled === true;
   if (stored.divergentEnabled !== undefined) state.divergentEnabled = stored.divergentEnabled === true;
-  if (stored.divergentNullEnabled !== undefined) state.divergentNullEnabled = stored.divergentNullEnabled === true;
+  if (stored.divergentNullEnabled !== undefined) {
+    state.divergentNullEnabled = Boolean(stored.divergentNullEnabled);
+  }
   if (stored.svgHideColourLabels !== undefined) state.svgHideColourLabels = stored.svgHideColourLabels === true;
 }
 
