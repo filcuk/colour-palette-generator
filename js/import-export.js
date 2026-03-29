@@ -104,8 +104,14 @@ export function parseSvgPalette(text) {
           const out = { colors: meta.colors.map(toFullHex).filter(Boolean), name: (meta.name || '').trim() };
           if (Array.isArray(meta.sentimentColors) && meta.sentimentColors.length === 3)
             out.sentimentColors = meta.sentimentColors.map(toFullHex).filter(Boolean).slice(0, 3);
-          if (Array.isArray(meta.divergentColors) && meta.divergentColors.length === 3)
-            out.divergentColors = meta.divergentColors.map(toFullHex).filter(Boolean).slice(0, 3);
+          if (Array.isArray(meta.divergentColors) && meta.divergentColors.length >= 3) {
+            const base = DEFAULTS_DIVERGENT.slice();
+            for (let i = 0; i < Math.min(4, meta.divergentColors.length); i++) {
+              const h = toFullHex(meta.divergentColors[i]);
+              if (h) base[i] = h;
+            }
+            out.divergentColors = base;
+          }
           return out;
         }
       } catch { }
@@ -236,19 +242,43 @@ export function createImportExport(refs, getUi, themesApi) {
         : '';
       if (themeNameEl) themeNameEl.value = state.name;
 
-      const hasSentiment = data.good != null && data.center != null && data.bad != null;
+      const hasSentiment =
+        data.good != null &&
+        (data.neutral != null || data.center != null) &&
+        data.bad != null;
       if (hasSentiment) {
         state.sentimentEnabled = true;
-        const g = toFullHex(data.good), c = toFullHex(data.center), b = toFullHex(data.bad);
-        state.sentimentColors = [g || DEFAULTS_SENTIMENT[0], c || DEFAULTS_SENTIMENT[1], b || DEFAULTS_SENTIMENT[2]];
+        const g = toFullHex(data.good);
+        const n = toFullHex(data.neutral != null ? data.neutral : data.center);
+        const b = toFullHex(data.bad);
+        state.sentimentColors = [g || DEFAULTS_SENTIMENT[0], n || DEFAULTS_SENTIMENT[1], b || DEFAULTS_SENTIMENT[2]];
       } else {
         state.sentimentEnabled = false;
       }
-      const hasDivergent = data.neutral != null && data.minimum != null && data.maximum != null;
-      if (hasDivergent) {
+      const hasDivergentNew =
+        data.maximum != null && data.center != null && data.minimum != null;
+      const hasDivergentLegacy =
+        data.neutral != null && data.minimum != null && data.maximum != null;
+      if (hasDivergentNew) {
         state.divergentEnabled = true;
-        const n0 = toFullHex(data.neutral), n1 = toFullHex(data.minimum), n2 = toFullHex(data.maximum);
-        state.divergentColors = [n0 || DEFAULTS_DIVERGENT[0], n1 || DEFAULTS_DIVERGENT[1], n2 || DEFAULTS_DIVERGENT[2]];
+        const n0 = toFullHex(data.maximum);
+        const n1 = toFullHex(data.center);
+        const n2 = toFullHex(data.minimum);
+        const n3 = toFullHex(data['null']);
+        state.divergentColors = [
+          n0 || DEFAULTS_DIVERGENT[0],
+          n1 || DEFAULTS_DIVERGENT[1],
+          n2 || DEFAULTS_DIVERGENT[2],
+          n3 || DEFAULTS_DIVERGENT[3]
+        ];
+      } else if (hasDivergentLegacy) {
+        state.divergentEnabled = true;
+        const o0 = toFullHex(data.neutral);
+        const o1 = toFullHex(data.minimum);
+        const o2 = toFullHex(data.maximum);
+        const o3 = toFullHex(data['null']);
+        const legacy = [o0, o1, o2, o3].map((h, i) => h || DEFAULTS_DIVERGENT[i]);
+        state.divergentColors = [legacy[2], legacy[0], legacy[1], legacy[3]];
       } else {
         state.divergentEnabled = false;
       }
@@ -311,9 +341,13 @@ export function createImportExport(refs, getUi, themesApi) {
         } else {
           state.sentimentEnabled = false;
         }
-        if (Array.isArray(parsed.divergentColors) && parsed.divergentColors.length === 3) {
-          state.divergentColors = parsed.divergentColors.map(toFullHex).filter(Boolean).slice(0, 3);
-          if (state.divergentColors.length < 3) state.divergentColors = DEFAULTS_DIVERGENT.slice();
+        if (Array.isArray(parsed.divergentColors) && parsed.divergentColors.length >= 3) {
+          const next = DEFAULTS_DIVERGENT.slice();
+          for (let i = 0; i < Math.min(4, parsed.divergentColors.length); i++) {
+            const h = toFullHex(parsed.divergentColors[i]);
+            if (h) next[i] = h;
+          }
+          state.divergentColors = next;
           state.divergentEnabled = true;
         } else {
           state.divergentEnabled = false;

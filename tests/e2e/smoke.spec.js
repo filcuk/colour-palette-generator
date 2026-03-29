@@ -129,40 +129,41 @@ test.describe('Colour Palette Generator', () => {
       await heading.scrollIntoViewIfNeeded();
       await heading.click();
       await expect(wrap).not.toHaveClass(/optional-hidden/);
-      await expect(page.getByRole('textbox', { name: 'Negative' })).toBeVisible();
+      await expect(page.getByRole('textbox', { name: 'Good' })).toBeVisible();
       await expect(page.getByRole('textbox', { name: 'Neutral' })).toBeVisible();
-      await expect(page.getByRole('textbox', { name: 'Positive' })).toBeVisible();
+      await expect(page.getByRole('textbox', { name: 'Bad' })).toBeVisible();
     });
 
     test('sentiment swatch accepts hex via picker', async ({ page }) => {
       const sHead = page.locator('#blockSentiment .colour-block-heading');
       await sHead.scrollIntoViewIfNeeded();
       await sHead.click();
-      await page.getByRole('textbox', { name: 'Neutral' }).click();
+      await page.getByRole('textbox', { name: 'Neutral', exact: true }).click();
       const hex = page.locator('#pickerHex');
       await hex.fill('#123456');
       await hex.press('Enter');
       await expect(page.getByRole('textbox', { name: 'Neutral' })).toHaveValue('#123456');
     });
 
-    test('enabling divergent shows Low / Mid / High swatches', async ({ page }) => {
+    test('enabling divergent shows Maximum / Center / Minimum / null swatches', async ({ page }) => {
       const wrap = page.locator('#rowDivergentWrap');
       await expect(wrap).toHaveClass(/optional-hidden/);
       const dHead = page.locator('#blockDivergent .colour-block-heading');
       await dHead.scrollIntoViewIfNeeded();
       await dHead.click();
       await expect(wrap).not.toHaveClass(/optional-hidden/);
-      // exact: true — "Low" can match CMYK Yellow field via accessible name substring
-      await expect(page.getByRole('textbox', { name: 'Low', exact: true })).toBeVisible();
-      await expect(page.getByRole('textbox', { name: 'Mid', exact: true })).toBeVisible();
-      await expect(page.getByRole('textbox', { name: 'High', exact: true })).toBeVisible();
+      // exact: true — short labels can match CMYK fields via accessible name substring
+      await expect(page.getByRole('textbox', { name: 'Maximum', exact: true })).toBeVisible();
+      await expect(page.getByRole('textbox', { name: 'Center', exact: true })).toBeVisible();
+      await expect(page.getByRole('textbox', { name: 'Minimum', exact: true })).toBeVisible();
+      await expect(page.getByRole('textbox', { name: 'null', exact: true })).toBeVisible();
     });
 
     test('divergent swatch hex input normalizes', async ({ page }) => {
       const dHead = page.locator('#blockDivergent .colour-block-heading');
       await dHead.scrollIntoViewIfNeeded();
       await dHead.click();
-      const mid = page.getByRole('textbox', { name: 'Mid', exact: true });
+      const mid = page.getByRole('textbox', { name: 'Center', exact: true });
       await mid.click();
       await mid.fill('00f');
       await mid.press('Enter');

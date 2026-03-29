@@ -119,7 +119,7 @@ function renderSwatches(n) {
 function renderSentimentSwatches() {
   if (!rowSentimentEl) return;
   let html = '';
-  const labels = ['Negative', 'Neutral', 'Positive'];
+  const labels = ['Good', 'Neutral', 'Bad'];
   for (let i = 0; i < 3; i++) {
     const val = toFullHex(state.sentimentColors[i]) || '';
     html += swatchHTML('sentiment', i, val, labels[i]);
@@ -136,8 +136,8 @@ function renderSentimentSwatches() {
 function renderDivergentSwatches() {
   if (!rowDivergentEl) return;
   let html = '';
-  const labels = ['Low', 'Mid', 'High'];
-  for (let i = 0; i < 3; i++) {
+  const labels = ['Maximum', 'Center', 'Minimum', 'null'];
+  for (let i = 0; i < 4; i++) {
     const val = toFullHex(state.divergentColors[i]) || '';
     html += swatchHTML('divergent', i, val, labels[i]);
   }
@@ -180,7 +180,12 @@ function updateActiveClass() {
 }
 
 function setActive(section, index) {
-  const maxIdx = section === 'theme' ? state.count - 1 : 2;
+  const maxIdx =
+    section === 'theme'
+      ? state.count - 1
+      : section === 'divergent'
+        ? 3
+        : 2;
   const i = Math.max(0, Math.min(maxIdx, index));
   state.activeSection = section;
   state.activeIndex = i;

@@ -12,7 +12,9 @@ import {
   saveState,
   saveSavedThemes,
   setAfterSaveStateHook,
-  replaceHashFromStateNow
+  replaceHashFromStateNow,
+  getDivergentColorsResolved,
+  migrateLegacyDivergentOrder
 } from './state.js';
 
 export let savedThemes = [];
@@ -159,13 +161,14 @@ export function createThemesController(refs, getUi, io, opts = {}) {
       colors.push(hex);
     }
     const sentiment = (state.sentimentColors || []).slice(0, 3).map(c => toFullHex(c)).filter(Boolean);
-    const divergent = (state.divergentColors || []).slice(0, 3).map(c => toFullHex(c)).filter(Boolean);
+    const divergent = getDivergentColorsResolved();
     return {
       name: cleanName,
       count: state.count,
       colors,
       sentimentColors: sentiment.length === 3 ? sentiment : DEFAULTS_SENTIMENT.slice(),
-      divergentColors: divergent.length === 3 ? divergent : DEFAULTS_DIVERGENT.slice(),
+      divergentColors: divergent.slice(),
+      divergentOrder: 'mcmn',
       sentimentEnabled: !!state.sentimentEnabled,
       divergentEnabled: !!state.divergentEnabled
     };
@@ -222,9 +225,16 @@ export function createThemesController(refs, getUi, io, opts = {}) {
       state.sentimentColors = theme.sentimentColors.map(toFullHex).filter(Boolean).slice(0, 3);
       if (state.sentimentColors.length < 3) state.sentimentColors = DEFAULTS_SENTIMENT.slice();
     }
-    if (Array.isArray(theme.divergentColors) && theme.divergentColors.length === 3) {
-      state.divergentColors = theme.divergentColors.map(toFullHex).filter(Boolean).slice(0, 3);
-      if (state.divergentColors.length < 3) state.divergentColors = DEFAULTS_DIVERGENT.slice();
+    if (Array.isArray(theme.divergentColors) && theme.divergentColors.length >= 3) {
+      let next = DEFAULTS_DIVERGENT.slice();
+      for (let i = 0; i < Math.min(4, theme.divergentColors.length); i++) {
+        const h = toFullHex(theme.divergentColors[i]);
+        if (h) next[i] = h;
+      }
+      if (theme.divergentOrder !== 'mcmn' && theme.divergentColors.length >= 4) {
+        next = migrateLegacyDivergentOrder(next);
+      }
+      state.divergentColors = next;
     }
     ui.renderSentimentSwatches();
     ui.renderDivergentSwatches();
@@ -258,6 +268,7 @@ export function createThemesController(refs, getUi, io, opts = {}) {
       colors: DEFAULTS.slice(0, 8),
       sentimentColors: DEFAULTS_SENTIMENT.slice(),
       divergentColors: DEFAULTS_DIVERGENT.slice(),
+      divergentOrder: 'mcmn',
       sentimentEnabled: !!state.sentimentEnabled,
       divergentEnabled: !!state.divergentEnabled
     };

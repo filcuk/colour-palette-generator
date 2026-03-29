@@ -34,11 +34,12 @@ describe('buildThemeJsonPayloadFromState', () => {
     expect(p.dataColors).toHaveLength(2);
     expect(p.dataColors[0]).toBe('#111111');
     expect(p.good).toBeDefined();
-    expect(p.center).toBeDefined();
-    expect(p.bad).toBeDefined();
     expect(p.neutral).toBeDefined();
-    expect(p.minimum).toBeDefined();
+    expect(p.bad).toBeDefined();
     expect(p.maximum).toBeDefined();
+    expect(p.center).toBeDefined();
+    expect(p.minimum).toBeDefined();
+    expect(p['null']).toBeDefined();
   });
 
   it('uses default name when empty', () => {
@@ -73,7 +74,7 @@ describe('buildExportSvgString', () => {
     expect(metaMatch).toBeTruthy();
     const meta = JSON.parse(metaMatch[1]);
     expect(meta.app).toBe('colour-palette');
-    expect(meta.version).toBe(6);
+    expect(meta.version).toBe(7);
     expect(meta.colors).toEqual(themeColors);
     expect(meta.name).toBe('Unit');
   });
