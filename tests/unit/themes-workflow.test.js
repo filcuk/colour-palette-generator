@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { toFullHex } from '../../js/colour-math.js';
-import { DEFAULTS } from '../../js/colour-export.js';
+import { DEFAULTS, DEFAULTS_SENTIMENT, DEFAULTS_DIVERGENT } from '../../js/colour-export.js';
 
 /**
  * Fresh JSDOM + vi.resetModules() so each test gets a clean document (no leaked
@@ -40,6 +40,7 @@ function installFreshDom() {
 }
 
 /**
+ * @param {{ onDivergentRender?: (divergentNullEnabled: boolean) => void }} [options]
  * @returns {Promise<{
  *   themesApi: object,
  *   savedThemes: import('../../js/themes.js').savedThemes,
@@ -53,7 +54,8 @@ function installFreshDom() {
  *   clearSavedThemesList: () => void
  * }>}
  */
-async function createHarness() {
+async function createHarness(options = {}) {
+  const { onDivergentRender } = options;
   vi.resetModules();
   const stateMod = await import('../../js/state.js');
   const themesMod = await import('../../js/themes.js');
@@ -104,7 +106,9 @@ async function createHarness() {
       state.count = n;
     },
     renderSentimentSwatches() {},
-    renderDivergentSwatches() {},
+    renderDivergentSwatches() {
+      if (typeof onDivergentRender === 'function') onDivergentRender(state.divergentNullEnabled);
+    },
     updateOptionalSectionsVisibility() {},
     syncInputsFromState() {
       for (let i = 0; i < state.count; i++) {
@@ -252,6 +256,43 @@ describe('theme storage workflows', () => {
       expect(savedThemes.length).toBe(1);
       expect(savedThemes[0].name).toMatch(/^Theme \d+$/);
       expect(themeNameEl.value).toBe(savedThemes[0].name);
+    });
+  });
+
+  it('applies divergent null flag before divergent render when switching themes (regression)', async () => {
+    await withFreshDom(async () => {
+      const divergentNullAtRender = [];
+      const { themesApi, savedThemes, state } = await createHarness({
+        onDivergentRender(flag) {
+          divergentNullAtRender.push(flag);
+        }
+      });
+
+      function themePayload(name, divergentNullEnabled) {
+        return {
+          name,
+          count: 8,
+          colors: DEFAULTS.slice(0, 8),
+          sentimentColors: DEFAULTS_SENTIMENT.slice(),
+          divergentColors: DEFAULTS_DIVERGENT.slice(),
+          divergentOrder: 'mcmn',
+          sentimentEnabled: false,
+          divergentEnabled: true,
+          divergentNullEnabled
+        };
+      }
+
+      const tOn = themePayload('WithNull', true);
+      const tOff = themePayload('NoNull', false);
+      savedThemes.length = 0;
+      savedThemes.push(tOn, tOff);
+
+      themesApi.applySavedTheme(tOn);
+      expect(state.divergentNullEnabled).toBe(true);
+      themesApi.applySavedTheme(tOff);
+      expect(state.divergentNullEnabled).toBe(false);
+
+      expect(divergentNullAtRender).toEqual([true, false]);
     });
   });
 });
