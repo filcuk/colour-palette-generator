@@ -42,9 +42,9 @@ describe('buildThemeJsonPayloadFromState', () => {
     expect(p['null']).toBeDefined();
   });
 
-  it('uses default name when empty', () => {
+  it('omits name when empty so exports are not mistaken for named themes on re-import', () => {
     const p = buildThemeJsonPayloadFromState(minimalState({ name: '   ' }));
-    expect(p.name).toBe('Custom');
+    expect(p).not.toHaveProperty('name');
   });
 
   it('omits sentiment and divergent when disabled', () => {

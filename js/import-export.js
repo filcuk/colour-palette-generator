@@ -14,6 +14,7 @@ import {
   replaceHashFromStateNow
 } from './state.js';
 import { savedThemes, setSuppressAutoThemeSave } from './themes.js';
+import { showToast } from './toasts.js';
 
 export function showCopyButtonFeedback(btn, success) {
   if (!btn) return;
@@ -226,7 +227,7 @@ export function createImportExport(refs, getUi, themesApi) {
       const text = await file.text();
       const data = JSON.parse(text);
       if (!data || !Array.isArray(data.dataColors) || !data.dataColors.length) {
-        alert('Invalid theme JSON: expected an object with a "dataColors" array.');
+        alert('Invalid theme JSON: expected an object with a \'dataColors\' array.');
         return;
       }
       const colors = data.dataColors.map(c => toFullHex(c)).filter(Boolean);
@@ -234,14 +235,20 @@ export function createImportExport(refs, getUi, themesApi) {
         alert('No valid hex colours found in dataColors.');
         return;
       }
+      const importName =
+        typeof data.name === 'string' ? clampThemeName(data.name) : '';
+      if (!importName) {
+        showToast('Import failed: file must include a non-empty \'name\' property.', {
+          theme: 'critical'
+        });
+        return;
+      }
       setSuppressAutoThemeSave(true);
       try {
         const n = Math.max(1, Math.min(16, colors.length));
         ui.setPaletteFromArray(colors);
         ui.setCount(n);
-        state.name = (typeof data.name === 'string' && data.name.trim())
-          ? clampThemeName(data.name)
-          : '';
+        state.name = importName;
         if (themeNameEl) themeNameEl.value = state.name;
 
         const hasSentiment =
@@ -330,19 +337,23 @@ export function createImportExport(refs, getUi, themesApi) {
       const text = await file.text();
       const parsed = parseSvgPalette(text);
       if (parsed && parsed.colors && parsed.colors.length) {
+        const svgName =
+          typeof parsed.name === 'string' ? clampThemeName(parsed.name) : '';
+        if (!svgName) {
+          showToast(
+            'Theme import failed: the SVG must include a theme name (metadata or document title).',
+            { theme: 'critical' }
+          );
+          return;
+        }
         setSuppressAutoThemeSave(true);
         try {
           const colors = parsed.colors;
           const n = Math.max(1, Math.min(16, colors.length));
           ui.setPaletteFromArray(colors);
           ui.setCount(n);
-          if (typeof parsed.name === 'string' && parsed.name.trim().length) {
-            state.name = clampThemeName(parsed.name);
-            if (themeNameEl) themeNameEl.value = state.name;
-          } else {
-            if (themeNameEl) themeNameEl.value = '';
-            state.name = '';
-          }
+          state.name = svgName;
+          if (themeNameEl) themeNameEl.value = state.name;
           if (Array.isArray(parsed.sentimentColors) && parsed.sentimentColors.length === 3) {
             state.sentimentColors = parsed.sentimentColors.map(toFullHex).filter(Boolean).slice(0, 3);
             if (state.sentimentColors.length < 3) state.sentimentColors = DEFAULTS_SENTIMENT.slice();

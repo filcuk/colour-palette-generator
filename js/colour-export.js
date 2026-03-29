@@ -58,10 +58,9 @@ function getDivergentColorsResolved(s) {
 }
 
 export function buildThemeJsonPayloadFromState(s) {
-  const payload = {
-    name: (s.name || '').trim() || 'Custom',
-    dataColors: getThemeColorsFromState(s)
-  };
+  const nm = (s.name || '').trim();
+  const dataColors = getThemeColorsFromState(s);
+  const payload = nm ? { name: nm, dataColors } : { dataColors };
   if (s.sentimentEnabled) {
     const sentiment = getSentimentColorsResolved(s);
     payload.good = sentiment[0];
