@@ -22,6 +22,11 @@ export let savedThemes = [];
 export let suppressAutoThemeSave = false;
 export let themeDirty = false;
 
+/** Prevents {@link autoSaveThemeIfNamed} from running during saveState (e.g. JSON/SVG import). */
+export function setSuppressAutoThemeSave(v) {
+  suppressAutoThemeSave = !!v;
+}
+
 /** Index of the saved theme last applied or created; drives rename-in-place for the combobox. */
 let activeSavedThemeIndex = -1;
 

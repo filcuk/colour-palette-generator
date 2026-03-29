@@ -13,7 +13,7 @@ import {
   buildExportSvgOptsFromState,
   replaceHashFromStateNow
 } from './state.js';
-import { savedThemes } from './themes.js';
+import { savedThemes, setSuppressAutoThemeSave } from './themes.js';
 
 export function showCopyButtonFeedback(btn, success) {
   if (!btn) return;
@@ -234,83 +234,88 @@ export function createImportExport(refs, getUi, themesApi) {
         alert('No valid hex colours found in dataColors.');
         return;
       }
-      const n = Math.max(1, Math.min(16, colors.length));
-      ui.setPaletteFromArray(colors);
-      ui.setCount(n);
-      state.name = (typeof data.name === 'string' && data.name.trim())
-        ? clampThemeName(data.name)
-        : '';
-      if (themeNameEl) themeNameEl.value = state.name;
+      setSuppressAutoThemeSave(true);
+      try {
+        const n = Math.max(1, Math.min(16, colors.length));
+        ui.setPaletteFromArray(colors);
+        ui.setCount(n);
+        state.name = (typeof data.name === 'string' && data.name.trim())
+          ? clampThemeName(data.name)
+          : '';
+        if (themeNameEl) themeNameEl.value = state.name;
 
-      const hasSentiment =
-        data.good != null &&
-        (data.neutral != null || data.center != null) &&
-        data.bad != null;
-      if (hasSentiment) {
-        state.sentimentEnabled = true;
-        const g = toFullHex(data.good);
-        const n = toFullHex(data.neutral != null ? data.neutral : data.center);
-        const b = toFullHex(data.bad);
-        state.sentimentColors = [g || DEFAULTS_SENTIMENT[0], n || DEFAULTS_SENTIMENT[1], b || DEFAULTS_SENTIMENT[2]];
-      } else {
-        state.sentimentEnabled = false;
-      }
-      const hasDivergentNew =
-        data.maximum != null && data.center != null && data.minimum != null;
-      const hasDivergentLegacy =
-        data.neutral != null && data.minimum != null && data.maximum != null;
-      if (hasDivergentNew) {
-        state.divergentEnabled = true;
-        const n0 = toFullHex(data.maximum);
-        const n1 = toFullHex(data.center);
-        const n2 = toFullHex(data.minimum);
-        const n3 = toFullHex(data['null']);
-        state.divergentNullEnabled = n3 != null;
-        state.divergentColors = [
-          n0 || DEFAULTS_DIVERGENT[0],
-          n1 || DEFAULTS_DIVERGENT[1],
-          n2 || DEFAULTS_DIVERGENT[2],
-          n3 || DEFAULTS_DIVERGENT[3]
-        ];
-      } else if (hasDivergentLegacy) {
-        state.divergentEnabled = true;
-        const o0 = toFullHex(data.neutral);
-        const o1 = toFullHex(data.minimum);
-        const o2 = toFullHex(data.maximum);
-        const o3 = toFullHex(data['null']);
-        state.divergentNullEnabled = o3 != null;
-        const legacy = [o0, o1, o2, o3].map((h, i) => h || DEFAULTS_DIVERGENT[i]);
-        state.divergentColors = [legacy[2], legacy[0], legacy[1], legacy[3]];
-      } else {
-        state.divergentEnabled = false;
-      }
-      ui.updateOptionalSectionsVisibility();
-      ui.renderSentimentSwatches();
-      ui.renderDivergentSwatches();
-      saveState();
-      replaceHashFromStateNow();
-      updateThemeStatus();
-      updateJsonPreview();
-
-      const name = (state.name || '').trim();
-      if (name && themeComboList) {
-        const payload = buildCurrentThemePayload(name);
-        if (payload) {
-          const existingIndex = savedThemes.findIndex(t => t.name === name);
-          if (existingIndex === -1) {
-            savedThemes.push(payload);
-            saveSavedThemes(savedThemes);
-            refreshSavedThemesUI(name);
-            setActiveSavedThemeIndex(savedThemes.length - 1);
-          } else if (confirm(`A theme named "${name}" already exists. Overwrite with the imported palette?`)) {
-            savedThemes[existingIndex] = payload;
-            saveSavedThemes(savedThemes);
-            refreshSavedThemesUI(name);
-            setActiveSavedThemeIndex(existingIndex);
-          }
-          setThemeDirty(false);
-          updateThemeStatus();
+        const hasSentiment =
+          data.good != null &&
+          (data.neutral != null || data.center != null) &&
+          data.bad != null;
+        if (hasSentiment) {
+          state.sentimentEnabled = true;
+          const g = toFullHex(data.good);
+          const neutralHue = toFullHex(data.neutral != null ? data.neutral : data.center);
+          const b = toFullHex(data.bad);
+          state.sentimentColors = [g || DEFAULTS_SENTIMENT[0], neutralHue || DEFAULTS_SENTIMENT[1], b || DEFAULTS_SENTIMENT[2]];
+        } else {
+          state.sentimentEnabled = false;
         }
+        const hasDivergentNew =
+          data.maximum != null && data.center != null && data.minimum != null;
+        const hasDivergentLegacy =
+          data.neutral != null && data.minimum != null && data.maximum != null;
+        if (hasDivergentNew) {
+          state.divergentEnabled = true;
+          const n0 = toFullHex(data.maximum);
+          const n1 = toFullHex(data.center);
+          const n2 = toFullHex(data.minimum);
+          const n3 = toFullHex(data['null']);
+          state.divergentNullEnabled = n3 != null;
+          state.divergentColors = [
+            n0 || DEFAULTS_DIVERGENT[0],
+            n1 || DEFAULTS_DIVERGENT[1],
+            n2 || DEFAULTS_DIVERGENT[2],
+            n3 || DEFAULTS_DIVERGENT[3]
+          ];
+        } else if (hasDivergentLegacy) {
+          state.divergentEnabled = true;
+          const o0 = toFullHex(data.neutral);
+          const o1 = toFullHex(data.minimum);
+          const o2 = toFullHex(data.maximum);
+          const o3 = toFullHex(data['null']);
+          state.divergentNullEnabled = o3 != null;
+          const legacy = [o0, o1, o2, o3].map((h, i) => h || DEFAULTS_DIVERGENT[i]);
+          state.divergentColors = [legacy[2], legacy[0], legacy[1], legacy[3]];
+        } else {
+          state.divergentEnabled = false;
+        }
+        ui.updateOptionalSectionsVisibility();
+        ui.renderSentimentSwatches();
+        ui.renderDivergentSwatches();
+        saveState();
+        replaceHashFromStateNow();
+        updateThemeStatus();
+        updateJsonPreview();
+
+        const name = (state.name || '').trim();
+        if (name && themeComboList) {
+          const payload = buildCurrentThemePayload(name);
+          if (payload) {
+            const existingIndex = savedThemes.findIndex(t => t.name === name);
+            if (existingIndex === -1) {
+              savedThemes.push(payload);
+              saveSavedThemes(savedThemes);
+              refreshSavedThemesUI(name);
+              setActiveSavedThemeIndex(savedThemes.length - 1);
+            } else if (confirm(`A theme named "${name}" already exists. Overwrite with the imported palette?`)) {
+              savedThemes[existingIndex] = payload;
+              saveSavedThemes(savedThemes);
+              refreshSavedThemesUI(name);
+              setActiveSavedThemeIndex(existingIndex);
+            }
+            setThemeDirty(false);
+            updateThemeStatus();
+          }
+        }
+      } finally {
+        setSuppressAutoThemeSave(false);
       }
     } catch (err) {
       alert('Failed to read or parse the JSON file. ' + (err && err.message ? err.message : ''));
@@ -325,63 +330,68 @@ export function createImportExport(refs, getUi, themesApi) {
       const text = await file.text();
       const parsed = parseSvgPalette(text);
       if (parsed && parsed.colors && parsed.colors.length) {
-        const colors = parsed.colors;
-        const n = Math.max(1, Math.min(16, colors.length));
-        ui.setPaletteFromArray(colors);
-        ui.setCount(n);
-        if (typeof parsed.name === 'string' && parsed.name.trim().length) {
-          state.name = clampThemeName(parsed.name);
-          if (themeNameEl) themeNameEl.value = state.name;
-        } else {
-          if (themeNameEl) themeNameEl.value = '';
-          state.name = '';
-        }
-        if (Array.isArray(parsed.sentimentColors) && parsed.sentimentColors.length === 3) {
-          state.sentimentColors = parsed.sentimentColors.map(toFullHex).filter(Boolean).slice(0, 3);
-          if (state.sentimentColors.length < 3) state.sentimentColors = DEFAULTS_SENTIMENT.slice();
-          state.sentimentEnabled = true;
-        } else {
-          state.sentimentEnabled = false;
-        }
-        if (Array.isArray(parsed.divergentColors) && parsed.divergentColors.length >= 3) {
-          const next = DEFAULTS_DIVERGENT.slice();
-          for (let i = 0; i < Math.min(4, parsed.divergentColors.length); i++) {
-            const h = toFullHex(parsed.divergentColors[i]);
-            if (h) next[i] = h;
+        setSuppressAutoThemeSave(true);
+        try {
+          const colors = parsed.colors;
+          const n = Math.max(1, Math.min(16, colors.length));
+          ui.setPaletteFromArray(colors);
+          ui.setCount(n);
+          if (typeof parsed.name === 'string' && parsed.name.trim().length) {
+            state.name = clampThemeName(parsed.name);
+            if (themeNameEl) themeNameEl.value = state.name;
+          } else {
+            if (themeNameEl) themeNameEl.value = '';
+            state.name = '';
           }
-          state.divergentColors = next;
-          state.divergentEnabled = true;
-          state.divergentNullEnabled = parsed.divergentColors.length >= 4;
-        } else {
-          state.divergentEnabled = false;
-        }
-        ui.renderSentimentSwatches();
-        ui.renderDivergentSwatches();
-        ui.updateOptionalSectionsVisibility();
-        saveState();
-        replaceHashFromStateNow();
+          if (Array.isArray(parsed.sentimentColors) && parsed.sentimentColors.length === 3) {
+            state.sentimentColors = parsed.sentimentColors.map(toFullHex).filter(Boolean).slice(0, 3);
+            if (state.sentimentColors.length < 3) state.sentimentColors = DEFAULTS_SENTIMENT.slice();
+            state.sentimentEnabled = true;
+          } else {
+            state.sentimentEnabled = false;
+          }
+          if (Array.isArray(parsed.divergentColors) && parsed.divergentColors.length >= 3) {
+            const next = DEFAULTS_DIVERGENT.slice();
+            for (let i = 0; i < Math.min(4, parsed.divergentColors.length); i++) {
+              const h = toFullHex(parsed.divergentColors[i]);
+              if (h) next[i] = h;
+            }
+            state.divergentColors = next;
+            state.divergentEnabled = true;
+            state.divergentNullEnabled = parsed.divergentColors.length >= 4;
+          } else {
+            state.divergentEnabled = false;
+          }
+          ui.renderSentimentSwatches();
+          ui.renderDivergentSwatches();
+          ui.updateOptionalSectionsVisibility();
+          saveState();
+          replaceHashFromStateNow();
 
-        const name = (state.name || '').trim();
-        if (name && themeComboList) {
-          const payload = buildCurrentThemePayload(name);
-          if (payload) {
-            const existingIndex = savedThemes.findIndex(t => t.name === name);
-            if (existingIndex === -1) {
-              savedThemes.push(payload);
-              saveSavedThemes(savedThemes);
-              refreshSavedThemesUI(name);
-              setActiveSavedThemeIndex(savedThemes.length - 1);
-            } else {
-              if (confirm(`A theme named "${name}" already exists. Overwrite with the imported palette?`)) {
-                savedThemes[existingIndex] = payload;
+          const name = (state.name || '').trim();
+          if (name && themeComboList) {
+            const payload = buildCurrentThemePayload(name);
+            if (payload) {
+              const existingIndex = savedThemes.findIndex(t => t.name === name);
+              if (existingIndex === -1) {
+                savedThemes.push(payload);
                 saveSavedThemes(savedThemes);
                 refreshSavedThemesUI(name);
-                setActiveSavedThemeIndex(existingIndex);
+                setActiveSavedThemeIndex(savedThemes.length - 1);
+              } else {
+                if (confirm(`A theme named "${name}" already exists. Overwrite with the imported palette?`)) {
+                  savedThemes[existingIndex] = payload;
+                  saveSavedThemes(savedThemes);
+                  refreshSavedThemesUI(name);
+                  setActiveSavedThemeIndex(existingIndex);
+                }
               }
+              setThemeDirty(false);
+              updateThemeStatus();
             }
-            setThemeDirty(false);
-            updateThemeStatus();
           }
+        } finally {
+          setSuppressAutoThemeSave(false);
         }
       } else {
         alert('Could not find a palette in this SVG. Make sure it was exported by this tool.');
