@@ -22,7 +22,12 @@ A theme/colour palette generator, predominantly for use in [MS Power BI](https:/
 > [!TIP]
 > Tested on Firefox. Please submit any issues or suggestions [here](https://github.com/filcuk/pbi-theme-customiser/issues).
 
-![Preview](res/example1.png)
+## Preview
+![Theme management](res/preview/theme_management.webp)
+![Colour swatches](res/preview/colour_swatches.webp)
+![Import/export](res/preview/import_export.webp)
+
+*Preview images created with the help of [moocup.jaydip.me](https://moocup.jaydip.me/)*
 
 # Development
 ## Project layout
