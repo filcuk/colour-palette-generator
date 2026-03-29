@@ -1,13 +1,33 @@
-# <img src="res/logo.png" width="32"> Colour Palette Generator
-![Playwright](https://github.com/filcuk/colour-palette-generator/actions/workflows/playwright.yml/badge.svg)
+# <img src="res/logo.png" width="32"> Colour Palette Generator: [Launch](https://filcuk.github.io/colour-palette-generator/)
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/filcuk/colour-palette-generator)
+ ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/filcuk/colour-palette-generator)
+ ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/filcuk/colour-palette-generator/playwright.yml?label=tests) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/filcuk/colour-palette-generator/pages%2Fpages-build-deployment?label=deployment)
 
-Link: [github.io/colour-palette-generator](https://filcuk.github.io/colour-palette-generator/)
+> [!IMPORTANT]
+> This project is almost entirely vibe-coded.
+
+A theme/colour palette generator, predominantly for use in [MS Power BI](https://www.microsoft.com/en-us/power-platform/products/power-bi).
+
+## Features
+- **🧮 Variable colour count**
+- **📊 Sentiment and divergent colours** with gradient preview & export
+- **⌨️ Various input options** including HEX, RGB, CYMK, colour picker, colour sets
+- **🔲 contrast ratio validation** testing for B/W 4.5:1 or higher
+- **🎨 Multiple palette management** using browser local storage with automatic saving
+- **⌛ Undo** colour changes and other actions
+- **📤 Export with preview** to svg image, Power BI json theme file
+- **📥 Import** any exported format to restore palette, or any standard Power BI json theme file
+- **🔗 Easy sharing** by forwarding the URL, which stores the state of the current palette
+
+> [!TIP]
+> Tested on Firefox. Please submit any issues or suggestions [here](https://github.com/filcuk/colour-palette-generator/issues).
 
 ![Preview](res/example1.png)
 
-> [!IMPORTANT]
-> This project is almost entirely vibe-coded. Nearly 3000 lines of slop, held together by duct tape and a prayer.
+## Credit
+Logo image: <a href="https://www.flaticon.com/free-icons/color-palette" title="color palette icons">Color palette icons created by Freepik - Flaticon</a>
 
+# Development
 ## Project layout
 
 | Path | Role |
@@ -34,19 +54,6 @@ npm start
 ```
 
 That serves the project on **http://127.0.0.1:8080** and opens your browser. To serve without opening a tab, use `npm run serve` instead.
-
-## Features
-- **Variable colour count**
-- **Optional subsets** for sentiment and divergent colours
-- **Various input options**: HEX, RGB, CYMK, colour picker, colour sets
-- B/W **contrast check**
-- **Saving palettes** to browser
-- **Export with preview** to svg image, Power BI json theme file
-- **Import** any exported format to restore palette
-- **Share** themes simply by forwarding the full URL
-
-> [!TIP]
-> Tested on Firefox. Please submit any issues or suggestions [here](https://github.com/filcuk/colour-palette-generator/issues).
 
 ## Testing
 
@@ -81,7 +88,4 @@ npx playwright install chromium
 
 After an E2E run, an HTML report may appear under `playwright-report/` (open `index.html` in a browser to view it).
 
-**CI:** Pushes and pull requests to `main` / `master` run unit tests and E2E tests via GitHub Actions (`.github/workflows/playwright.yml`). Failed E2E runs upload the Playwright report as an artifact.
-
-## Credit
-Logo image: <a href="https://www.flaticon.com/free-icons/color-palette" title="color palette icons">Color palette icons created by Freepik - Flaticon</a>
+**CI:** Pushes and pull requests to `main` run unit tests and E2E tests via GitHub Actions (`.github/workflows/playwright.yml`). Failed E2E runs upload the Playwright report as an artifact.
