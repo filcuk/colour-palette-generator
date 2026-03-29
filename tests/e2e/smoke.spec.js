@@ -3,11 +3,11 @@ import { test, expect } from '@playwright/test';
 test.describe('Colour Palette Generator', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(/Colour Palette/i);
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/Power BI Theme Customiser/i);
   });
 
   test('loads and shows the main heading', async ({ page }) => {
-    await expect(page).toHaveTitle(/Colour Palette/i);
+    await expect(page).toHaveTitle(/Power BI Theme Customiser/i);
   });
 
   test('theme name field is visible', async ({ page }) => {
