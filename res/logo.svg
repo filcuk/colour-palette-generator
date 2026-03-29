@@ -1,0 +1,28 @@
+<svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 630 630" width="630" height="630">
+	<defs>
+		<linearGradient id="g1" x2="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0,630,-219,0,443,0)">
+			<stop offset="0" stop-color="#ebbb14"/>
+			<stop offset="1" stop-color="#b22a00"/>
+		</linearGradient>
+		<linearGradient id="g2" x2="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0,473,-219,0,314,157)">
+			<stop offset="0" stop-color="#9edd6e"/>
+			<stop offset="1" stop-color="#27636e"/>
+		</linearGradient>
+		<linearGradient id="g3" x2="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0,315,-219,0,187,315)">
+			<stop offset="0" stop-color="#b791ea"/>
+			<stop offset="1" stop-color="#3d36d2"/>
+		</linearGradient>
+	</defs>
+	<style>
+		.s0 { fill: url(#g1) } 
+		.s1 { fill: url(#g2) } 
+		.s2 { fill: url(#g3) } 
+	</style>
+	<g id="PBI-Logo">
+		<g id="Group">
+			<path id="Rectangle" fill-rule="evenodd" class="s0" d="m359.5 0h167c14.36 0 26 11.64 26 26v578c0 14.36-11.64 26-26 26h-167c-14.36 0-26-11.64-26-26v-578c0-14.36 11.64-26 26-26z"/>
+			<path id="path-3" fill-rule="evenodd" class="s1" d="m423.5 604v26h-26-167c-14.36 0-26-11.64-26-26v-421c0-14.36 11.64-26 26-26h167c14.36 0 26 11.64 26 26z"/>
+			<path id="Combined-Shape" fill-rule="evenodd" class="s2" d="m296.5 604v26h-26-167c-14.36 0-26-11.64-26-26v-263c0-14.36 11.64-26 26-26h167c14.36 0 26 11.64 26 26z"/>
+		</g>
+	</g>
+</svg>

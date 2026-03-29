@@ -1,4 +1,4 @@
-# <img src="res/logo.png" width="32"> Colour Palette Generator: [Launch](https://filcuk.github.io/pbi-theme-customiser/)
+# <img src="res/logo.svg" width="32"> Power BI Theme Customiser: [Launch](https://filcuk.github.io/pbi-theme-customiser/)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/filcuk/pbi-theme-customiser)
  ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/filcuk/pbi-theme-customiser)
  ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/filcuk/pbi-theme-customiser/playwright.yml?label=tests) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/filcuk/pbi-theme-customiser/pages%2Fpages-build-deployment?label=deployment)
@@ -23,9 +23,6 @@ A theme/colour palette generator, predominantly for use in [MS Power BI](https:/
 > Tested on Firefox. Please submit any issues or suggestions [here](https://github.com/filcuk/pbi-theme-customiser/issues).
 
 ![Preview](res/example1.png)
-
-## Credit
-Logo image: <a href="https://www.flaticon.com/free-icons/color-palette" title="color palette icons">Color palette icons created by Freepik - Flaticon</a>
 
 # Development
 ## Project layout
