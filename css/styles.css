@@ -37,10 +37,77 @@ h1 {
   font-weight: 600;
 }
 
-.subtitle {
-  margin: -8px 0 14px;
+/* Expandable user guide (README features) */
+.features-guide {
+  margin: -8px 0 16px;
   color: #444;
   font: 12px/1.4 var(--font);
+}
+.features-guide-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+  cursor: pointer;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.features-guide-summary::-webkit-details-marker {
+  display: none;
+}
+.features-guide-summary::marker {
+  content: '';
+}
+.features-guide-tagline {
+  flex: 1 1 auto;
+  min-width: min(100%, 12rem);
+}
+.features-guide-cta {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.features-guide-chevron {
+  display: inline-block;
+  transition: transform 0.2s ease;
+  font-size: 0.65em;
+  line-height: 1;
+  vertical-align: middle;
+  margin-top: -0.05em;
+}
+.features-guide[open] .features-guide-chevron {
+  transform: rotate(90deg);
+}
+.features-guide-panel {
+  margin-top: 12px;
+  padding: 16px 18px;
+  background: #fafafa;
+  border: 1px solid rgba(0, 0, 0, .1);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font: 13px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+.features-guide-title {
+  margin: 0 0 10px;
+  font: 600 14px/1.3 var(--font);
+  color: #333;
+}
+.features-guide-list {
+  margin: 0;
+  padding-left: 1.15em;
+}
+.features-guide-list li {
+  margin: 0 0 8px;
+}
+.features-guide-list li:last-child {
+  margin-bottom: 0;
 }
 
 .page-section {

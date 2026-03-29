@@ -9,15 +9,15 @@
 A theme/colour palette generator, predominantly for use in [MS Power BI](https://www.microsoft.com/en-us/power-platform/products/power-bi).
 
 ## Features
-- **🧮 Variable colour count**
-- **📊 Sentiment and divergent colours** with gradient preview & export
-- **⌨️ Various input options** including HEX, RGB, CYMK, colour picker, colour sets
-- **🔲 contrast ratio validation** testing for B/W 4.5:1 or higher
-- **🎨 Multiple palette management** using browser local storage with automatic saving
-- **⌛ Undo** colour changes and other actions
-- **📤 Export with preview** to svg image, Power BI json theme file
-- **📥 Import** any exported format to restore palette, or any standard Power BI json theme file
-- **🔗 Easy sharing** by forwarding the URL, which stores the state of the current palette
+- **🧮 Variable colour count**: pick how many theme colours you need
+- **📊 Sentiment and divergent colours**: with gradient preview & export
+- **⌨️ Flexible inputs**: including HEX, RGB, CYMK, colour picker, and predefined colour sets
+- **🔲 Contrast checks**: validation for black and white text at 4.5:1 or higher
+- **🎨 Theme management**: using browser local storage with automatic saving
+- **⌛ Undo**: step back through colour changes and other actions
+- **📤 Export with preview**: SVG image and Power BI JSON theme file
+- **📥 Import**: restore from exported JSON/SVG or a standard Power BI theme JSON
+- **🔗 Share via URL**: forward the link; the address bar holds the current theme state
 
 > [!TIP]
 > Tested on Firefox. Please submit any issues or suggestions [here](https://github.com/filcuk/pbi-theme-customiser/issues).

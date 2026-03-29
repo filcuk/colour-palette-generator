@@ -14,7 +14,28 @@
   <div id="toastHost" class="toast-host" aria-live="polite" aria-relevant="additions"></div>
   <div id="contrastTooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
   <h1><img src="res/logo.svg" width="32"> Power BI Theme Customiser</h1>
-  <div class="subtitle">Theme customiser for use in Power BI.</div>
+  <details class="features-guide" id="featuresGuide">
+    <summary class="features-guide-summary">
+      <span class="features-guide-tagline">Theme customiser for use in Power BI.</span>
+      <span class="features-guide-cta">
+        Features
+        <span class="features-guide-chevron" aria-hidden="true">▶</span>
+      </span>
+    </summary>
+    <div class="features-guide-panel">
+      <ul class="features-guide-list">
+        <li><strong>🧮 Variable colour count</strong>: pick how many theme colours you need</li>
+        <li><strong>📊 Sentiment and divergent colours</strong>: with gradient preview & export</li>
+        <li><strong>⌨️ Flexible inputs</strong>: including HEX, RGB, CYMK, colour picker, and predefined colour sets</li>
+        <li><strong>🔲 Contrast checks</strong>: validation for black and white text at 4.5:1 or higher</li>
+        <li><strong>🎨 Theme management</strong>: multiple named palettes in this browser with automatic saving</li>
+        <li><strong>⌛ Undo</strong>; step back through colour changes and other actions</li>
+        <li><strong>📤 Export with preview</strong>: SVG image and Power BI JSON theme file</li>
+        <li><strong>📥 Import</strong>: restore from exported JSON/SVG or a standard Power BI theme JSON</li>
+        <li><strong>🔗 Share via URL</strong>: forward the link; the address bar holds the current theme state</li>
+      </ul>
+    </div>
+  </details>
 
   <section class="page-section" aria-labelledby="section-themes">
     <h2 id="section-themes">Themes</h2>
@@ -51,9 +72,9 @@
     </div>
     <div class="colour-block" id="blockSentiment">
       <label class="colour-block-heading">
+        <span class="colour-block-title">Sentiment colours</span>
         <input type="checkbox" id="sentimentEnabled" class="toggle-checkbox" aria-label="Toggle Sentiment colours" />
         <span class="toggle-icon" aria-hidden="true"></span>
-        <span class="colour-block-title">Sentiment colours</span>
       </label>
       <div class="optional-content" id="rowSentimentWrap">
         <div class="row row-fixed" id="rowSentiment" role="group" aria-label="Sentiment color swatches"></div>
@@ -61,9 +82,9 @@
     </div>
     <div class="colour-block" id="blockDivergent">
       <label class="colour-block-heading">
+        <span class="colour-block-title">Divergent colours</span>
         <input type="checkbox" id="divergentEnabled" class="toggle-checkbox" aria-label="Toggle Divergent colours" />
         <span class="toggle-icon" aria-hidden="true"></span>
-        <span class="colour-block-title">Divergent colours</span>
       </label>
       <div class="optional-content" id="rowDivergentWrap">
         <div class="divergent-null-toggle-wrap">
