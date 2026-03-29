@@ -11,6 +11,7 @@
 </head>
 
 <body>
+  <div id="toastHost" class="toast-host" aria-live="polite" aria-relevant="additions"></div>
   <div id="contrastTooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
   <h1>Colour Palette Generator</h1>
   <div class="subtitle">Generate a colour palette, validate contrast, export to svg, re-import back.</div>
@@ -21,12 +22,12 @@
     <div class="controls" style="margin-top:10px;">
       <div class="themes-manager" title="Name your theme or pick a saved one; used for export and stored in SVG">
         <div class="theme-combo">
-          <input id="themeName" class="theme-combo-input" type="text" placeholder="My theme or pick saved…" autocomplete="off" />
+          <input id="themeName" class="theme-combo-input" type="text" maxlength="64" placeholder="My theme or pick saved…" autocomplete="off" title="Theme name, up to 64 characters" />
           <button type="button" class="theme-combo-trigger" id="themeComboTrigger" aria-label="Open saved themes" aria-expanded="false" aria-haspopup="listbox">▼</button>
           <ul id="themeComboList" class="theme-combo-list" role="listbox" aria-hidden="true"></ul>
         </div>
-        <button id="saveThemeBtn" type="button" title="Save current palette as a named theme">Save</button>
-        <button id="newThemeBtn" type="button" title="Create a new theme with default colours and save to storage">New</button>
+        <button id="duplicateThemeBtn" type="button" title="Copy the current palette to a new saved theme (numbered name)">Duplicate</button>
+        <button id="newThemeBtn" type="button" title="Add a new saved theme with default colours">New</button>
         <button id="deleteThemeBtn" type="button" title="Delete the theme with the current name">Delete</button>
         <div class="theme-status" id="themeStatus" role="status" aria-live="polite">
           <span class="theme-status-icon" id="themeStatusIcon" aria-hidden="true"></span>

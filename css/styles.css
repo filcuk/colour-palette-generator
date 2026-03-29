@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --gap: 12px;
   --size: 90px;
   --radius: 10px;
@@ -833,4 +833,42 @@ input[type="file"] {
     max-width: 100%;
     box-sizing: border-box;
   }
+}
+
+/* —— Toasts (transient top-right messages) —— */
+.toast-host {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: none;
+  padding: 10px 14px;
+  font: 13px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: var(--callout-info-text);
+  background: var(--callout-info-bg);
+  border: 1px solid var(--callout-info-border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translateX(12px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast--visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.toast--exit {
+  opacity: 0;
+  transform: translateX(8px);
 }

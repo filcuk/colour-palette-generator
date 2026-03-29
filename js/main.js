@@ -15,6 +15,11 @@ import {
 } from './themes.js';
 import { createImportExport } from './import-export.js';
 import { initUi } from './ui.js';
+import { clampThemeName } from './theme-name.js';
+import { createTwiceConfirmPair } from './twice-confirm.js';
+import { showToast } from './toasts.js';
+
+let dangerArms = null;
 
 const refs = {
   rowEl: document.getElementById('row'),
@@ -45,7 +50,7 @@ const refs = {
   themeComboList: document.getElementById('themeComboList'),
   themeStatusIcon: document.getElementById('themeStatusIcon'),
   themeStatusLabel: document.getElementById('themeStatusLabel'),
-  saveThemeBtn: document.getElementById('saveThemeBtn'),
+  duplicateThemeBtn: document.getElementById('duplicateThemeBtn'),
   newThemeBtn: document.getElementById('newThemeBtn'),
   deleteThemeBtn: document.getElementById('deleteThemeBtn'),
   pickerPanel: document.getElementById('pickerPanel'),
@@ -71,15 +76,45 @@ const io = {
 };
 
 let ui;
-const themes = createThemesController(refs, () => ui, io);
+
+function runResetAndReseed() {
+  resetStateData();
+  clearSavedThemesList();
+  if (refs.themeNameEl) refs.themeNameEl.value = '';
+  if (refs.svgHideColourLabelsCb) refs.svgHideColourLabelsCb.checked = false;
+  ui.setCount(state.count);
+  ui.renderSentimentSwatches();
+  ui.renderDivergentSwatches();
+  ui.updateOptionalSectionsVisibility();
+  ui.setActive('theme', 0);
+  themes.ensureInitialThemeIfEmpty();
+  themes.refreshSavedThemesUI(clampThemeName(refs.themeNameEl ? refs.themeNameEl.value : ''));
+  setThemeDirty(false);
+  themes.updateThemeStatus();
+  showToast('Local storage was reset');
+}
+
+const themes = createThemesController(refs, () => ui, io, {
+  onLastThemeDeleted: runResetAndReseed
+});
 ui = initUi(refs, themes, io);
 Object.assign(io, createImportExport(refs, () => ui, themes));
+
+if (refs.resetBtn && refs.deleteThemeBtn) {
+  dangerArms = createTwiceConfirmPair({
+    resetBtn: refs.resetBtn,
+    deleteBtn: refs.deleteThemeBtn,
+    onReset: () => runResetAndReseed(),
+    onDelete: () => themes.deleteCurrentSavedTheme()
+  });
+}
 
 const fromHash = readStateFromHash();
 const stored = fromHash || loadState();
 if (stored) ui.applyStoredState(stored);
 
 window.addEventListener('hashchange', () => {
+  dangerArms?.clear();
   const fromHashNow = readStateFromHash();
   if (fromHashNow) {
     ui.applyStoredState(fromHashNow);
@@ -100,27 +135,12 @@ if (pickerSetSelect) {
   ui.showPickerSubsection('basic');
 }
 
-themes.refreshSavedThemesUI('');
+themes.ensureInitialThemeIfEmpty();
+themes.syncActiveSavedThemeToFieldName();
+themes.refreshSavedThemesUI(clampThemeName(refs.themeNameEl ? refs.themeNameEl.value : ''));
 themes.updateThemeStatus();
 io.updateJsonPreview();
 io.updateSvgPreview();
 saveState();
 updateHashFromState();
 
-if (refs.resetBtn) {
-  refs.resetBtn.addEventListener('click', () => {
-    if (!confirm('Clear all stored themes and reset palette to defaults? This cannot be undone.')) return;
-    resetStateData();
-    clearSavedThemesList();
-    if (refs.themeNameEl) refs.themeNameEl.value = '';
-    if (refs.svgHideColourLabelsCb) refs.svgHideColourLabelsCb.checked = false;
-    ui.setCount(state.count);
-    ui.renderSentimentSwatches();
-    ui.renderDivergentSwatches();
-    ui.updateOptionalSectionsVisibility();
-    ui.setActive('theme', 0);
-    if (refs.themeComboList) themes.refreshSavedThemesUI('');
-    setThemeDirty(false);
-    themes.updateThemeStatus();
-  });
-}

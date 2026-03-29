@@ -5,6 +5,7 @@ import {
   DEFAULTS_DIVERGENT
 } from './colour-export.js';
 import { toFullHex, sanitizeNameForFile } from './colour-math.js';
+import { clampThemeName } from './theme-name.js';
 import {
   state,
   saveState,
@@ -162,7 +163,8 @@ export function createImportExport(refs, getUi, themesApi) {
     updateThemeStatus,
     refreshSavedThemesUI,
     buildCurrentThemePayload,
-    setThemeDirty
+    setThemeDirty,
+    setActiveSavedThemeIndex
   } = themesApi;
 
   function buildThemeJsonPayload() {
@@ -228,7 +230,9 @@ export function createImportExport(refs, getUi, themesApi) {
       const n = Math.max(1, Math.min(16, colors.length));
       ui.setPaletteFromArray(colors);
       ui.setCount(n);
-      state.name = (typeof data.name === 'string' && data.name.trim()) ? data.name.trim() : '';
+      state.name = (typeof data.name === 'string' && data.name.trim())
+        ? clampThemeName(data.name)
+        : '';
       if (themeNameEl) themeNameEl.value = state.name;
 
       const hasSentiment = data.good != null && data.center != null && data.bad != null;
@@ -263,10 +267,12 @@ export function createImportExport(refs, getUi, themesApi) {
             savedThemes.push(payload);
             saveSavedThemes(savedThemes);
             refreshSavedThemesUI(name);
+            setActiveSavedThemeIndex(savedThemes.length - 1);
           } else if (confirm(`A theme named "${name}" already exists. Overwrite with the imported palette?`)) {
             savedThemes[existingIndex] = payload;
             saveSavedThemes(savedThemes);
             refreshSavedThemesUI(name);
+            setActiveSavedThemeIndex(existingIndex);
           }
           setThemeDirty(false);
           updateThemeStatus();
@@ -290,7 +296,7 @@ export function createImportExport(refs, getUi, themesApi) {
         ui.setPaletteFromArray(colors);
         ui.setCount(n);
         if (typeof parsed.name === 'string' && parsed.name.trim().length) {
-          state.name = parsed.name.trim();
+          state.name = clampThemeName(parsed.name);
           if (themeNameEl) themeNameEl.value = state.name;
         } else {
           if (themeNameEl) themeNameEl.value = '';
@@ -324,11 +330,13 @@ export function createImportExport(refs, getUi, themesApi) {
               savedThemes.push(payload);
               saveSavedThemes(savedThemes);
               refreshSavedThemesUI(name);
+              setActiveSavedThemeIndex(savedThemes.length - 1);
             } else {
               if (confirm(`A theme named "${name}" already exists. Overwrite with the imported palette?`)) {
                 savedThemes[existingIndex] = payload;
                 saveSavedThemes(savedThemes);
                 refreshSavedThemesUI(name);
+                setActiveSavedThemeIndex(existingIndex);
               }
             }
             setThemeDirty(false);

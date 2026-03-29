@@ -1,4 +1,5 @@
 import { toFullHex } from './colour-math.js';
+import { clampThemeName } from './theme-name.js';
 import {
   DEFAULTS,
   DEFAULTS_SENTIMENT,
@@ -102,7 +103,7 @@ export function loadState() {
 function stateToHashPayload() {
   const themeColors = getThemeColorsFromState().map(h => (h && h.length >= 7 ? h.slice(1) : '000000'));
   const payload = {
-    n: (state.name || '').trim(),
+    n: clampThemeName(state.name || ''),
     c: state.count,
     d: themeColors
   };
@@ -129,7 +130,7 @@ function hashPayloadToStoredShape(p) {
     : DEFAULTS_DIVERGENT.slice();
   return {
     count,
-    name: (p.n != null ? String(p.n) : '').trim(),
+    name: clampThemeName(p.n != null ? String(p.n) : ''),
     colors: colors.length ? colors : [DEFAULTS[0]],
     sentimentColors: sentimentColors.length === 3 ? sentimentColors : DEFAULTS_SENTIMENT.slice(),
     divergentColors: divergentColors.length === 3 ? divergentColors : DEFAULTS_DIVERGENT.slice(),
@@ -175,7 +176,7 @@ export function readStateFromHash() {
 export function mergeStoredIntoState(stored) {
   if (!stored) return;
   state.count = stored.count;
-  state.name = stored.name || '';
+  state.name = clampThemeName(stored.name || '');
   for (let i = 0; i < Math.min(stored.colors.length, 16); i++) {
     const h = toFullHex(stored.colors[i]); if (h) state.colors[i] = h;
   }
@@ -194,12 +195,14 @@ export function loadSavedThemes() {
     if (!raw) return [];
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
-    return arr.filter(t =>
-      t &&
-      typeof t.name === 'string' &&
-      Array.isArray(t.colors) &&
-      t.colors.length
-    );
+    return arr
+      .filter(t =>
+        t &&
+        typeof t.name === 'string' &&
+        Array.isArray(t.colors) &&
+        t.colors.length
+      )
+      .map(t => ({ ...t, name: clampThemeName(t.name) }));
   } catch {
     return [];
   }

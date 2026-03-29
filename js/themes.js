@@ -1,4 +1,11 @@
 import { toFullHex } from './colour-math.js';
+import {
+  allocateDuplicateThemeName,
+  allocateNumberedThemeNameFromBase,
+  clampThemeName,
+  resolveThemeNameAgainstSavedList
+} from './theme-name.js';
+import { showToast } from './toasts.js';
 import { DEFAULTS, DEFAULTS_SENTIMENT, DEFAULTS_DIVERGENT } from './colour-export.js';
 import {
   state,
@@ -11,34 +18,62 @@ export let savedThemes = [];
 export let suppressAutoThemeSave = false;
 export let themeDirty = false;
 
+/** Index of the saved theme last applied or created; drives rename-in-place for the combobox. */
+let activeSavedThemeIndex = -1;
+
+export function setActiveSavedThemeIndex(i) {
+  activeSavedThemeIndex = typeof i === 'number' && i >= 0 ? i : -1;
+}
+
 export function setThemeDirty(v) {
   themeDirty = !!v;
 }
 
 export function clearSavedThemesList() {
   savedThemes.length = 0;
+  activeSavedThemeIndex = -1;
 }
 
 /**
  * @param {object} refs - DOM refs from main
  * @param {() => object} getUi - returns ui API after initUi
  * @param {object} io - import/export API: updateJsonPreview, updateSvgPreview
+ * @param {{ onLastThemeDeleted?: () => void }} [opts]
  */
-export function createThemesController(refs, getUi, io) {
+export function createThemesController(refs, getUi, io, opts = {}) {
+  const { onLastThemeDeleted } = opts;
   const {
     themeNameEl,
     themeComboTrigger,
     themeComboList,
     themeStatusIcon,
     themeStatusLabel,
-    saveThemeBtn,
+    duplicateThemeBtn,
     newThemeBtn,
     deleteThemeBtn
   } = refs;
 
+  function themeNameFromField() {
+    return clampThemeName(themeNameEl ? themeNameEl.value : '');
+  }
+
+  function syncActiveSavedThemeToFieldName() {
+    if (!themeNameEl) {
+      activeSavedThemeIndex = -1;
+      return;
+    }
+    const name = themeNameFromField();
+    if (!name) {
+      activeSavedThemeIndex = -1;
+      return;
+    }
+    const i = savedThemes.findIndex(t => t.name === name);
+    activeSavedThemeIndex = i;
+  }
+
   function updateThemeStatus() {
     if (!themeStatusIcon || !themeStatusLabel) return;
-    const name = (themeNameEl && themeNameEl.value ? themeNameEl.value : '').trim();
+    const name = themeNameFromField();
     themeStatusIcon.className = 'theme-status-icon';
     if (!name) {
       themeStatusIcon.textContent = '\u2014';
@@ -112,6 +147,7 @@ export function createThemesController(refs, getUi, io) {
   }
 
   function buildCurrentThemePayload(name) {
+    const cleanName = clampThemeName(name == null ? '' : String(name));
     const ui = getUi();
     if (!ui || !ui.inputs) return null;
     const inputs = ui.inputs;
@@ -124,7 +160,7 @@ export function createThemesController(refs, getUi, io) {
     const sentiment = (state.sentimentColors || []).slice(0, 3).map(c => toFullHex(c)).filter(Boolean);
     const divergent = (state.divergentColors || []).slice(0, 3).map(c => toFullHex(c)).filter(Boolean);
     return {
-      name,
+      name: cleanName,
       count: state.count,
       colors,
       sentimentColors: sentiment.length === 3 ? sentiment : DEFAULTS_SENTIMENT.slice(),
@@ -136,13 +172,32 @@ export function createThemesController(refs, getUi, io) {
 
   function autoSaveThemeIfNamed() {
     if (!themeComboList || !themeNameEl) return;
-    const name = (themeNameEl.value || '').trim();
+    const name = themeNameFromField();
     if (!name) return;
+    if (activeSavedThemeIndex >= 0 && activeSavedThemeIndex < savedThemes.length) {
+      const finalName = resolveThemeNameAgainstSavedList(name, savedThemes, activeSavedThemeIndex);
+      const payload = buildCurrentThemePayload(finalName);
+      if (!payload) return;
+      savedThemes[activeSavedThemeIndex] = payload;
+      saveSavedThemes(savedThemes);
+      if (finalName !== name) {
+        themeNameEl.value = finalName;
+        state.name = finalName;
+        suppressAutoThemeSave = true;
+        saveState();
+        suppressAutoThemeSave = false;
+      }
+      refreshSavedThemesUI(finalName);
+      themeDirty = false;
+      updateThemeStatus();
+      return;
+    }
     const payload = buildCurrentThemePayload(name);
     if (!payload) return;
     const existingIndex = savedThemes.findIndex(t => t.name === name);
     if (existingIndex === -1) return;
     savedThemes[existingIndex] = payload;
+    activeSavedThemeIndex = existingIndex;
     saveSavedThemes(savedThemes);
     refreshSavedThemesUI(name);
     themeDirty = false;
@@ -155,8 +210,9 @@ export function createThemesController(refs, getUi, io) {
     if (!ui) return;
     const colors = Array.isArray(theme.colors) ? theme.colors : [];
     const n = Math.max(1, Math.min(16, theme.count || colors.length || 1));
-    state.name = theme.name || '';
-    themeNameEl.value = state.name;
+    const nm = clampThemeName(theme.name || '');
+    state.name = nm;
+    themeNameEl.value = nm;
     themeDirty = false;
     suppressAutoThemeSave = true;
     ui.setPaletteFromArray(colors);
@@ -175,20 +231,60 @@ export function createThemesController(refs, getUi, io) {
     state.divergentEnabled = theme.divergentEnabled !== false;
     ui.updateOptionalSectionsVisibility();
     suppressAutoThemeSave = false;
+    activeSavedThemeIndex = savedThemes.findIndex(t => t === theme);
+    if (activeSavedThemeIndex === -1)
+      activeSavedThemeIndex = savedThemes.findIndex(t => t.name === theme.name);
     saveState();
     updateThemeStatus();
+  }
+
+  /** Same payload and flow as the New button: auto name Theme 1, Theme 2, … */
+  function createNewAutoNamedTheme(announceCreate = false) {
+    const taken = new Set(savedThemes.map(t => t.name).filter(Boolean));
+    let name = allocateNumberedThemeNameFromBase('Theme', taken);
+    if (!name) {
+      let n = 1;
+      name = clampThemeName(`Theme ${n}`);
+      while (savedThemes.some(t => t.name === name)) {
+        n++;
+        name = clampThemeName(`Theme ${n}`);
+      }
+    }
+    const payload = {
+      name,
+      count: 8,
+      colors: DEFAULTS.slice(0, 8),
+      sentimentColors: DEFAULTS_SENTIMENT.slice(),
+      divergentColors: DEFAULTS_DIVERGENT.slice(),
+      sentimentEnabled: !!state.sentimentEnabled,
+      divergentEnabled: !!state.divergentEnabled
+    };
+    savedThemes.push(payload);
+    saveSavedThemes(savedThemes);
+    refreshSavedThemesUI(name);
+    applySavedTheme(payload);
+    if (announceCreate) {
+      showToast(`${name} was created with default preset.`);
+    }
+  }
+
+  /** When there are no saved themes, seed Theme 1 (or next free name) like New — no prompt. */
+  function ensureInitialThemeIfEmpty() {
+    if (savedThemes.length > 0) return false;
+    createNewAutoNamedTheme(false);
+    return true;
   }
 
   setAfterSaveStateHook(() => {
     if (!suppressAutoThemeSave) autoSaveThemeIfNamed();
   });
 
-  if (saveThemeBtn && newThemeBtn && deleteThemeBtn && themeComboList && themeNameEl) {
+  if (duplicateThemeBtn && newThemeBtn && deleteThemeBtn && themeComboList && themeNameEl) {
     if (themeComboTrigger) {
       themeComboTrigger.addEventListener('click', (e) => {
         e.preventDefault();
         if (themeComboList.classList.contains('open')) closeThemeCombo();
-        else { refreshSavedThemesUI((themeNameEl.value || '').trim()); openThemeCombo(); }
+        else { refreshSavedThemesUI(themeNameFromField()); openThemeCombo(); }
       });
     }
 
@@ -213,75 +309,77 @@ export function createThemesController(refs, getUi, io) {
     });
 
     newThemeBtn.addEventListener('click', () => {
-      let name = (prompt('Name for new theme:') || '').trim() || 'New theme';
-      const baseName = name;
-      let n = 1;
-      while (savedThemes.some(t => t.name === name)) {
-        name = baseName + ' ' + (n++);
-      }
-      const payload = {
-        name,
-        count: 8,
-        colors: DEFAULTS.slice(0, 8),
-        sentimentColors: DEFAULTS_SENTIMENT.slice(),
-        divergentColors: DEFAULTS_DIVERGENT.slice(),
-        sentimentEnabled: !!state.sentimentEnabled,
-        divergentEnabled: !!state.divergentEnabled
-      };
-      savedThemes.push(payload);
-      saveSavedThemes(savedThemes);
-      refreshSavedThemesUI(name);
-      applySavedTheme(payload);
+      createNewAutoNamedTheme(true);
     });
 
-    saveThemeBtn.addEventListener('click', () => {
-      const name = (themeNameEl.value || '').trim();
-      if (!name) {
-        alert('Please enter a theme name before saving.');
+    duplicateThemeBtn.addEventListener('click', () => {
+      const sourceName = themeNameFromField();
+      if (!sourceName) {
+        alert('Please enter or select a theme name before duplicating.');
         themeNameEl.focus();
         return;
       }
-      const payload = buildCurrentThemePayload(name);
-      if (!payload) {
-        alert('Please fix invalid hex values before saving this theme.');
+      const newName = allocateDuplicateThemeName(
+        sourceName,
+        savedThemes.map(t => t.name)
+      );
+      if (!newName) {
+        alert('Could not find an available duplicate name. Try shortening the theme name.');
         return;
       }
-      const existingIndex = savedThemes.findIndex(t => t.name === name);
-      if (existingIndex !== -1) {
-        if (!confirm(`A theme named "${name}" already exists. Overwrite it?`)) return;
-        savedThemes[existingIndex] = payload;
-      } else {
-        savedThemes.push(payload);
+      const payload = buildCurrentThemePayload(newName);
+      if (!payload) {
+        alert('Please fix invalid hex values before duplicating this theme.');
+        return;
       }
+      savedThemes.push(payload);
       saveSavedThemes(savedThemes);
-      refreshSavedThemesUI(name);
+      applySavedTheme(payload);
+      refreshSavedThemesUI(newName);
       themeDirty = false;
       updateThemeStatus();
+      showToast(`${newName} was duplicated from ${sourceName}.`);
     });
+  }
 
-    deleteThemeBtn.addEventListener('click', () => {
-      const name = (themeNameEl.value || '').trim();
-      if (!name) {
-        alert('Please enter or select a theme name to delete.');
-        return;
-      }
-      if (!savedThemes.some(t => t.name === name)) {
-        alert(`No saved theme named "${name}".`);
-        return;
-      }
-      if (!confirm(`Delete the theme "${name}"? This cannot be undone.`)) return;
-      savedThemes = savedThemes.filter(t => t.name !== name);
-      saveSavedThemes(savedThemes);
+  function deleteCurrentSavedTheme() {
+    if (!deleteThemeBtn || !themeNameEl) return;
+    const name = themeNameFromField();
+    if (!name) {
+      alert('Please enter or select a theme name to delete.');
+      return;
+    }
+    if (!savedThemes.some(t => t.name === name)) {
+      alert(`No saved theme named "${name}".`);
+      return;
+    }
+    const idx = savedThemes.findIndex(t => t.name === name);
+    if (savedThemes.length === 1 && typeof onLastThemeDeleted === 'function') {
+      onLastThemeDeleted();
+      return;
+    }
+    const kept = savedThemes.filter(t => t.name !== name);
+    savedThemes.splice(0, savedThemes.length, ...kept);
+    saveSavedThemes(savedThemes);
+    showToast(`${name} was deleted.`);
+    if (idx > 0 && savedThemes[idx - 1]) {
+      const prev = savedThemes[idx - 1];
+      applySavedTheme(prev);
+      refreshSavedThemesUI(prev.name);
+    } else {
+      activeSavedThemeIndex = -1;
       refreshSavedThemesUI('');
       themeNameEl.value = '';
       state.name = '';
       updateThemeStatus();
-    });
+    }
   }
 
   if (themeNameEl) {
     themeNameEl.addEventListener('input', () => {
-      state.name = themeNameEl.value;
+      const c = clampThemeName(themeNameEl.value);
+      if (themeNameEl.value !== c) themeNameEl.value = c;
+      state.name = c;
       markThemeDirty();
       saveState();
     });
@@ -294,6 +392,10 @@ export function createThemesController(refs, getUi, io) {
     refreshSavedThemesUI,
     buildCurrentThemePayload,
     autoSaveThemeIfNamed,
-    applySavedTheme
+    applySavedTheme,
+    ensureInitialThemeIfEmpty,
+    setActiveSavedThemeIndex,
+    syncActiveSavedThemeToFieldName,
+    deleteCurrentSavedTheme
   };
 }

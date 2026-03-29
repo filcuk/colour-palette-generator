@@ -654,6 +654,7 @@ if (pickerShadesEl) {
     updateOptionalSectionsVisibility();
     setActive('theme', 0);
     themesApi.updateThemeStatus();
+    themesApi.syncActiveSavedThemeToFieldName?.();
     ioApi.updateJsonPreview();
     ioApi.updateSvgPreview();
   }
