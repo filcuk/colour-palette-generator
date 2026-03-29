@@ -332,7 +332,7 @@ export function createThemesController(refs, getUi, io, opts = {}) {
     refreshSavedThemesUI(name);
     applySavedTheme(payload);
     if (announceCreate) {
-      showToast(`${name} was created with default preset.`);
+      showToast(`'${name}' was created with default preset.`, { theme: 'success' });
     }
   }
 
@@ -406,7 +406,7 @@ export function createThemesController(refs, getUi, io, opts = {}) {
       refreshSavedThemesUI(newName);
       themeDirty = false;
       updateThemeStatus();
-      showToast(`${newName} was duplicated from ${sourceName}.`);
+      showToast(`'${newName}' was duplicated from '${sourceName}'.`, { theme: 'success' });
     });
   }
 
@@ -418,7 +418,7 @@ export function createThemesController(refs, getUi, io, opts = {}) {
       return;
     }
     if (!savedThemes.some(t => t.name === name)) {
-      alert(`No saved theme named "${name}".`);
+      alert(`No saved theme named '${name}'.`);
       return;
     }
     const idx = savedThemes.findIndex(t => t.name === name);
@@ -429,7 +429,7 @@ export function createThemesController(refs, getUi, io, opts = {}) {
     const kept = savedThemes.filter(t => t.name !== name);
     savedThemes.splice(0, savedThemes.length, ...kept);
     saveSavedThemes(savedThemes);
-    showToast(`${name} was deleted.`);
+    showToast(`'${name}' was deleted.`);
     if (idx > 0 && savedThemes[idx - 1]) {
       const prev = savedThemes[idx - 1];
       applySavedTheme(prev);

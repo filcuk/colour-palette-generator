@@ -940,14 +940,35 @@ input[type="file"] {
   pointer-events: none;
   padding: 10px 14px;
   font: 13px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color: var(--callout-info-text);
-  background: var(--callout-info-bg);
-  border: 1px solid var(--callout-info-border);
   border-radius: 8px;
   box-shadow: var(--shadow);
   opacity: 0;
   transform: translateX(12px);
   transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast--info {
+  color: var(--callout-info-text);
+  background: var(--callout-info-bg);
+  border: 1px solid var(--callout-info-border);
+}
+
+.toast--success {
+  color: #0d3d0d;
+  background: #e8f5e9;
+  border: 1px solid #2e7d32;
+}
+
+.toast--warning {
+  color: var(--callout-warning-text);
+  background: var(--callout-warning-bg);
+  border: 1px solid var(--callout-warning-border);
+}
+
+.toast--critical {
+  color: #5c1010;
+  background: #fde8e8;
+  border: 1px solid #c62828;
 }
 
 .toast--visible {

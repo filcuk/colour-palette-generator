@@ -21,6 +21,14 @@ import { clampThemeName } from './theme-name.js';
 import { createTwiceConfirmPair } from './twice-confirm.js';
 import { showToast } from './toasts.js';
 
+function toastFirstConfirm(which) {
+  if (which === 'reset') {
+    showToast('Press again to confirm. All stored themes will be deleted.', { theme: 'critical' });
+  } else {
+    showToast('Press again to confirm. This action cannot be undone.', { theme: 'warning' });
+  }
+}
+
 let dangerArms = null;
 
 const refs = {
@@ -94,7 +102,7 @@ function runResetAndReseed() {
   themes.refreshSavedThemesUI(clampThemeName(refs.themeNameEl ? refs.themeNameEl.value : ''));
   setThemeDirty(false);
   themes.updateThemeStatus();
-  showToast('Local storage was reset');
+  showToast('Local storage was reset', { theme: 'success' });
 }
 
 const themes = createThemesController(refs, () => ui, io, {
@@ -108,7 +116,8 @@ if (refs.resetBtn && refs.deleteThemeBtn) {
     resetBtn: refs.resetBtn,
     deleteBtn: refs.deleteThemeBtn,
     onReset: () => runResetAndReseed(),
-    onDelete: () => themes.deleteCurrentSavedTheme()
+    onDelete: () => themes.deleteCurrentSavedTheme(),
+    onArm: toastFirstConfirm
   });
 }
 
