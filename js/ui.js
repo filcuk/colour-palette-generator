@@ -50,14 +50,30 @@ let sentimentWraps = [], sentimentInputs = [], sentimentBadgesWraps = [];
 let divergentWraps = [], divergentInputs = [], divergentBadgesWraps = [];
 let ph = 0, ps = 1, pv = 1; // picker HSV
 // ========= Rendering =========
-function swatchHTML(section, i, value, ariaLabel) {
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** @param {string} [meaningLabel] — when set, shown above the swatch (Sentiment / Divergent). */
+function swatchHTML(section, i, value, ariaLabel, meaningLabel) {
   const vAttr = value ? ` value="${value}"` : '';
   const isActive = state.activeSection === section && state.activeIndex === i;
   const activeCls = isActive ? ' active' : '';
   const label = ariaLabel || `${section} color ${i + 1}`;
+  const labelEsc = escapeHtml(label);
+  const optionalCls = meaningLabel != null && meaningLabel !== '' ? ' swatch-wrap--labeled' : '';
+  const meaningSpan =
+    meaningLabel != null && meaningLabel !== ''
+      ? `<span class="swatch-meaning-label">${escapeHtml(meaningLabel)}</span>`
+      : '';
   return `
-    <div class="swatch-wrap${activeCls}" data-section="${section}" data-index="${i}">
-      <input class="swatch-input" aria-label="${label}" placeholder="#RRGGBB"${vAttr} data-section="${section}" data-index="${i}" />
+    <div class="swatch-wrap${activeCls}${optionalCls}" data-section="${section}" data-index="${i}">
+      ${meaningSpan}
+      <input class="swatch-input" aria-label="${labelEsc}" placeholder="#RRGGBB"${vAttr} data-section="${section}" data-index="${i}" />
       <div class="swatch-contrast" aria-hidden="true" title=""></div>
     </div>
   `;
@@ -122,7 +138,7 @@ function renderSentimentSwatches() {
   const labels = ['Good', 'Neutral', 'Bad'];
   for (let i = 0; i < 3; i++) {
     const val = toFullHex(state.sentimentColors[i]) || '';
-    html += swatchHTML('sentiment', i, val, labels[i]);
+    html += swatchHTML('sentiment', i, val, labels[i], labels[i]);
   }
   rowSentimentEl.innerHTML = html;
   sentimentWraps = Array.from(rowSentimentEl.querySelectorAll('.swatch-wrap'));
@@ -139,7 +155,7 @@ function renderDivergentSwatches() {
   const labels = ['Maximum', 'Center', 'Minimum', 'null'];
   for (let i = 0; i < 4; i++) {
     const val = toFullHex(state.divergentColors[i]) || '';
-    html += swatchHTML('divergent', i, val, labels[i]);
+    html += swatchHTML('divergent', i, val, labels[i], labels[i]);
   }
   rowDivergentEl.innerHTML = html;
   divergentWraps = Array.from(rowDivergentEl.querySelectorAll('.swatch-wrap'));

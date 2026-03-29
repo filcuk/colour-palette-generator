@@ -142,6 +142,19 @@ h1 {
   position: relative;
 }
 
+.swatch-wrap--labeled {
+  padding-top: 2px;
+}
+
+.swatch-meaning-label {
+  display: block;
+  font: 600 11px/1.25 var(--font);
+  color: #5a5a5a;
+  text-align: center;
+  max-width: calc(var(--size) + 8px);
+  word-break: break-word;
+}
+
 .swatch-wrap.active .swatch-input {
   outline: 4px solid var(--accent)
 }
