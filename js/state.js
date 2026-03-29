@@ -17,6 +17,8 @@ export const state = {
   divergentColors: DEFAULTS_DIVERGENT.slice(),
   sentimentEnabled: false,
   divergentEnabled: false,
+  /** When false, the null swatch is hidden and omitted from Power BI JSON / SVG. */
+  divergentNullEnabled: true,
   svgHideColourLabels: false,
   activeSection: 'theme',
   activeIndex: 0
@@ -42,10 +44,15 @@ export function migrateLegacyDivergentOrder(colors) {
   return [h[2], h[0], h[1], h[3]];
 }
 export function buildExportSvgOptsFromState(forPreview) {
+  const fullDiv = getDivergentColorsResolved();
+  const divergentForExport =
+    state.divergentEnabled && state.divergentNullEnabled === false
+      ? fullDiv.slice(0, 3)
+      : fullDiv;
   return {
     themeColors: getThemeColorsFromState(),
     sentiment: getSentimentColorsResolved(),
-    divergent: getDivergentColorsResolved(),
+    divergent: divergentForExport,
     themeName: state.name,
     sentimentEnabled: state.sentimentEnabled,
     divergentEnabled: state.divergentEnabled,
@@ -77,6 +84,7 @@ export function saveState(options = {}) {
       divergentOrder: 'mcmn',
       sentimentEnabled: !!state.sentimentEnabled,
       divergentEnabled: !!state.divergentEnabled,
+      divergentNullEnabled: state.divergentNullEnabled !== false,
       svgHideColourLabels: !!state.svgHideColourLabels
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -115,6 +123,7 @@ export function loadState() {
       divergentOrder: 'mcmn',
       sentimentEnabled: data.sentimentEnabled === true,
       divergentEnabled: data.divergentEnabled === true,
+      divergentNullEnabled: data.divergentNullEnabled !== false,
       svgHideColourLabels: data.svgHideColourLabels === true
     };
   } catch { return null; }
@@ -135,6 +144,7 @@ function stateToHashPayload() {
     payload.dv = (state.divergentColors || DEFAULTS_DIVERGENT).slice(0, 4).map(c => (toFullHex(c) || '').slice(1) || '000000');
     payload.de = true;
     payload.dvV = 2;
+    if (state.divergentNullEnabled === false) payload.dn = false;
   }
   return payload;
 }
@@ -165,7 +175,8 @@ function hashPayloadToStoredShape(p) {
     divergentColors: divergentColors.length === 4 ? divergentColors : DEFAULTS_DIVERGENT.slice(),
     divergentOrder: p.de === true ? 'mcmn' : undefined,
     sentimentEnabled: p.se === true,
-    divergentEnabled: p.de === true
+    divergentEnabled: p.de === true,
+    divergentNullEnabled: p.de === true ? p.dn !== false : undefined
   };
 }
 function encodeHashPayload(payload) {
@@ -252,6 +263,7 @@ export function mergeStoredIntoState(stored) {
   }
   if (stored.sentimentEnabled !== undefined) state.sentimentEnabled = stored.sentimentEnabled === true;
   if (stored.divergentEnabled !== undefined) state.divergentEnabled = stored.divergentEnabled === true;
+  if (stored.divergentNullEnabled !== undefined) state.divergentNullEnabled = stored.divergentNullEnabled === true;
   if (stored.svgHideColourLabels !== undefined) state.svgHideColourLabels = stored.svgHideColourLabels === true;
 }
 
@@ -290,6 +302,7 @@ export function resetStateData() {
   state.divergentColors = DEFAULTS_DIVERGENT.slice();
   state.sentimentEnabled = false;
   state.divergentEnabled = false;
+  state.divergentNullEnabled = true;
   state.svgHideColourLabels = false;
   state.activeSection = 'theme';
   state.activeIndex = 0;

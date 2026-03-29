@@ -31,6 +31,7 @@ const refs = {
   rowDivergentWrapEl: document.getElementById('rowDivergentWrap'),
   sentimentEnabledCb: document.getElementById('sentimentEnabled'),
   divergentEnabledCb: document.getElementById('divergentEnabled'),
+  divergentNullEnabledCb: document.getElementById('divergentNullEnabled'),
   countSlider: document.getElementById('countSlider'),
   countValue: document.getElementById('countValue'),
   downloadBtn: document.getElementById('downloadBtn'),

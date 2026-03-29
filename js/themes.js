@@ -170,7 +170,8 @@ export function createThemesController(refs, getUi, io, opts = {}) {
       divergentColors: divergent.slice(),
       divergentOrder: 'mcmn',
       sentimentEnabled: !!state.sentimentEnabled,
-      divergentEnabled: !!state.divergentEnabled
+      divergentEnabled: !!state.divergentEnabled,
+      divergentNullEnabled: state.divergentNullEnabled !== false
     };
   }
 
@@ -236,10 +237,11 @@ export function createThemesController(refs, getUi, io, opts = {}) {
       }
       state.divergentColors = next;
     }
-    ui.renderSentimentSwatches();
-    ui.renderDivergentSwatches();
     state.sentimentEnabled = theme.sentimentEnabled !== false;
     state.divergentEnabled = theme.divergentEnabled !== false;
+    state.divergentNullEnabled = theme.divergentNullEnabled !== false;
+    ui.renderSentimentSwatches();
+    ui.renderDivergentSwatches();
     ui.updateOptionalSectionsVisibility();
     suppressAutoThemeSave = false;
     activeSavedThemeIndex = savedThemes.findIndex(t => t === theme);
@@ -270,7 +272,8 @@ export function createThemesController(refs, getUi, io, opts = {}) {
       divergentColors: DEFAULTS_DIVERGENT.slice(),
       divergentOrder: 'mcmn',
       sentimentEnabled: !!state.sentimentEnabled,
-      divergentEnabled: !!state.divergentEnabled
+      divergentEnabled: !!state.divergentEnabled,
+      divergentNullEnabled: true
     };
     savedThemes.push(payload);
     saveSavedThemes(savedThemes);

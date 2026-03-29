@@ -265,6 +265,7 @@ export function createImportExport(refs, getUi, themesApi) {
         const n1 = toFullHex(data.center);
         const n2 = toFullHex(data.minimum);
         const n3 = toFullHex(data['null']);
+        state.divergentNullEnabled = n3 != null;
         state.divergentColors = [
           n0 || DEFAULTS_DIVERGENT[0],
           n1 || DEFAULTS_DIVERGENT[1],
@@ -277,6 +278,7 @@ export function createImportExport(refs, getUi, themesApi) {
         const o1 = toFullHex(data.minimum);
         const o2 = toFullHex(data.maximum);
         const o3 = toFullHex(data['null']);
+        state.divergentNullEnabled = o3 != null;
         const legacy = [o0, o1, o2, o3].map((h, i) => h || DEFAULTS_DIVERGENT[i]);
         state.divergentColors = [legacy[2], legacy[0], legacy[1], legacy[3]];
       } else {
@@ -349,6 +351,7 @@ export function createImportExport(refs, getUi, themesApi) {
           }
           state.divergentColors = next;
           state.divergentEnabled = true;
+          state.divergentNullEnabled = parsed.divergentColors.length >= 4;
         } else {
           state.divergentEnabled = false;
         }

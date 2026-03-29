@@ -24,6 +24,7 @@ export function initUi(refs, themesApi, ioApi) {
     rowDivergentWrapEl,
     sentimentEnabledCb,
     divergentEnabledCb,
+    divergentNullEnabledCb,
     countSlider,
     countValue,
     summaryEl,
@@ -153,7 +154,8 @@ function renderDivergentSwatches() {
   if (!rowDivergentEl) return;
   let html = '';
   const labels = ['Maximum', 'Center', 'Minimum', 'null'];
-  for (let i = 0; i < 4; i++) {
+  const n = state.divergentNullEnabled !== false ? 4 : 3;
+  for (let i = 0; i < n; i++) {
     const val = toFullHex(state.divergentColors[i]) || '';
     html += swatchHTML('divergent', i, val, labels[i], labels[i]);
   }
@@ -200,7 +202,9 @@ function setActive(section, index) {
     section === 'theme'
       ? state.count - 1
       : section === 'divergent'
-        ? 3
+        ? state.divergentNullEnabled !== false
+          ? 3
+          : 2
         : 2;
   const i = Math.max(0, Math.min(maxIdx, index));
   state.activeSection = section;
@@ -297,10 +301,14 @@ function updateSummary() {
 function updateOptionalSectionsVisibility() {
   if (sentimentEnabledCb) sentimentEnabledCb.checked = !!state.sentimentEnabled;
   if (divergentEnabledCb) divergentEnabledCb.checked = !!state.divergentEnabled;
+  if (divergentNullEnabledCb) divergentNullEnabledCb.checked = state.divergentNullEnabled !== false;
   if (rowSentimentWrapEl) rowSentimentWrapEl.classList.toggle('optional-hidden', !state.sentimentEnabled);
   if (rowDivergentWrapEl) rowDivergentWrapEl.classList.toggle('optional-hidden', !state.divergentEnabled);
   if (state.activeSection === 'sentiment' && !state.sentimentEnabled) setActive('theme', 0);
   if (state.activeSection === 'divergent' && !state.divergentEnabled) setActive('theme', 0);
+  if (state.activeSection === 'divergent' && state.divergentNullEnabled === false && state.activeIndex > 2) {
+    setActive('divergent', 2);
+  }
 }
 
 // ========= Slider (1–16), Theme name =========
@@ -335,6 +343,20 @@ if (sentimentEnabledCb) {
 if (divergentEnabledCb) {
   divergentEnabledCb.addEventListener('change', () => {
     state.divergentEnabled = divergentEnabledCb.checked;
+    updateOptionalSectionsVisibility();
+    updateSummary();
+    saveState();
+    ioApi.updateJsonPreview();
+    ioApi.updateSvgPreview();
+  });
+}
+if (divergentNullEnabledCb) {
+  divergentNullEnabledCb.addEventListener('change', () => {
+    state.divergentNullEnabled = divergentNullEnabledCb.checked;
+    if (state.activeSection === 'divergent' && !state.divergentNullEnabled && state.activeIndex > 2) {
+      setActive('divergent', 2);
+    }
+    renderDivergentSwatches();
     updateOptionalSectionsVisibility();
     updateSummary();
     saveState();

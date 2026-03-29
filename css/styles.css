@@ -134,6 +134,13 @@ h1 {
 }
 .svg-option input[type="checkbox"] { margin-right: 6px; }
 
+.divergent-null-toggle-wrap {
+  margin-bottom: 8px;
+}
+.divergent-null-label {
+  margin: 0;
+}
+
 .swatch-wrap {
   display: inline-flex;
   flex-direction: column;
