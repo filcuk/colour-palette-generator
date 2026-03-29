@@ -52,7 +52,11 @@ export function setAfterSaveStateHook(fn) {
   afterSaveStateHook = typeof fn === 'function' ? fn : () => {};
 }
 
-export function saveState() {
+/**
+ * @param {{ skipHashUpdate?: boolean }} [options] - Set skipHashUpdate to persist only (e.g. after re-syncing URL from memory).
+ */
+export function saveState(options = {}) {
+  const skipHashUpdate = options.skipHashUpdate === true;
   try {
     const themeColors = getThemeColorsFromState();
     const sentiment = (state.sentimentColors || []).map(toFullHex).filter(Boolean).slice(0, 3);
@@ -69,7 +73,7 @@ export function saveState() {
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch { }
-  updateHashFromState();
+  if (!skipHashUpdate) updateHashFromState();
   afterSaveStateHook();
 }
 
@@ -156,16 +160,42 @@ function decodeHashPayload(hashStr) {
   } catch { return null; }
 }
 let hashUpdateTimer = null;
+/** After initial load, URL updates use pushState so Back/Forward undo/redo palette state. */
+let allowHashHistoryPush = false;
+
+export function enableHashHistoryPush() {
+  allowHashHistoryPush = true;
+}
+
+function getEncodedHashForCurrentState() {
+  const payload = stateToHashPayload();
+  return encodeHashPayload(payload);
+}
+
+function commitHashToUrl(usePush) {
+  try {
+    const encoded = getEncodedHashForCurrentState();
+    const url = location.pathname + location.search + '#' + encoded;
+    if (location.hash === '#' + encoded) return;
+    if (usePush) history.pushState(null, '', url);
+    else history.replaceState(null, '', url);
+  } catch { }
+}
+
+/** Clears pending debounced hash write and sets the URL with replaceState (initial sync). */
+export function replaceHashFromStateNow() {
+  if (hashUpdateTimer) {
+    clearTimeout(hashUpdateTimer);
+    hashUpdateTimer = null;
+  }
+  commitHashToUrl(false);
+}
+
 export function updateHashFromState() {
   if (hashUpdateTimer) clearTimeout(hashUpdateTimer);
   hashUpdateTimer = setTimeout(() => {
     hashUpdateTimer = null;
-    try {
-      const payload = stateToHashPayload();
-      const encoded = encodeHashPayload(payload);
-      const url = location.pathname + location.search + '#' + encoded;
-      if (location.hash !== '#' + encoded) history.replaceState(null, '', url);
-    } catch { }
+    commitHashToUrl(allowHashHistoryPush);
   }, 300);
 }
 export function readStateFromHash() {

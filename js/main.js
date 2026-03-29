@@ -5,6 +5,8 @@ import {
   loadSavedThemes,
   readStateFromHash,
   updateHashFromState,
+  replaceHashFromStateNow,
+  enableHashHistoryPush,
   resetStateData
 } from './state.js';
 import {
@@ -113,14 +115,29 @@ const fromHash = readStateFromHash();
 const stored = fromHash || loadState();
 if (stored) ui.applyStoredState(stored);
 
-window.addEventListener('hashchange', () => {
-  dangerArms?.clear();
-  const fromHashNow = readStateFromHash();
-  if (fromHashNow) {
-    ui.applyStoredState(fromHashNow);
-    saveState();
-  }
-});
+let urlNavRaf = null;
+function scheduleApplyStateFromUrl() {
+  if (urlNavRaf != null) return;
+  urlNavRaf = requestAnimationFrame(() => {
+    urlNavRaf = null;
+    dangerArms?.clear();
+    const fromHashNow = readStateFromHash();
+    if (fromHashNow) {
+      const hashName = clampThemeName(fromHashNow.name || '');
+      const curName = clampThemeName(state.name || '');
+      if (hashName !== curName) {
+        replaceHashFromStateNow();
+        saveState({ skipHashUpdate: true });
+        return;
+      }
+      ui.applyStoredState(fromHashNow);
+      saveState();
+    }
+  });
+}
+
+window.addEventListener('popstate', scheduleApplyStateFromUrl);
+window.addEventListener('hashchange', scheduleApplyStateFromUrl);
 
 savedThemes.push(...loadSavedThemes());
 
@@ -142,5 +159,6 @@ themes.updateThemeStatus();
 io.updateJsonPreview();
 io.updateSvgPreview();
 saveState();
-updateHashFromState();
+replaceHashFromStateNow();
+enableHashHistoryPush();
 

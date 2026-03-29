@@ -1,4 +1,5 @@
 # <img src="res/logo.png" width="32"> Colour Palette Generator
+![Playwright](https://github.com/filcuk/colour-palette-generator/actions/workflows/playwright.yml/badge.svg)
 
 Link: [github.io/colour-palette-generator](https://filcuk.github.io/colour-palette-generator/)
 
