@@ -44,6 +44,40 @@ test.describe('Colour Palette Generator', () => {
       await expect(swatch).toHaveValue('#FF0000');
     });
 
+    test('browser back restores previous palette from URL history', async ({ page }) => {
+      const swatch = page.getByRole('textbox', { name: 'Theme color 1' });
+      const before = await swatch.inputValue();
+      await swatch.click();
+      await swatch.fill('FF00AA');
+      await swatch.press('Enter');
+      await expect(swatch).toHaveValue('#FF00AA');
+      await page.waitForTimeout(400);
+      await page.goBack();
+      await expect(swatch).toHaveValue(before);
+    });
+
+    test('browser back after switching theme does not restore another theme palette', async ({ page }) => {
+      const firstName = await page.locator('#themeName').inputValue();
+      const swatch1 = page.getByRole('textbox', { name: 'Theme color 1' });
+      await swatch1.click();
+      await swatch1.fill('FF0000');
+      await swatch1.press('Enter');
+      await expect(swatch1).toHaveValue('#FF0000');
+
+      await page.getByRole('button', { name: 'New', exact: true }).click();
+      await expect(page.locator('#themeName')).not.toHaveValue(firstName);
+      const swatch2 = page.getByRole('textbox', { name: 'Theme color 1' });
+      await swatch2.fill('00FF00');
+      await swatch2.press('Enter');
+      await expect(swatch2).toHaveValue('#00FF00');
+
+      await page.waitForTimeout(400);
+      await page.goBack();
+      await expect(page.locator('#themeName')).not.toHaveValue(firstName);
+      // Must not apply the previous theme's palette (in-theme undo may still change the swatch).
+      await expect(swatch2).not.toHaveValue('#FF0000');
+    });
+
     test('picker HEX applies to active theme swatch', async ({ page }) => {
       await page.getByRole('textbox', { name: 'Theme color 3' }).click();
       const hex = page.locator('#pickerHex');

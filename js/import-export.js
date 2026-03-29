@@ -10,7 +10,8 @@ import {
   state,
   saveState,
   saveSavedThemes,
-  buildExportSvgOptsFromState
+  buildExportSvgOptsFromState,
+  replaceHashFromStateNow
 } from './state.js';
 import { savedThemes } from './themes.js';
 
@@ -255,6 +256,7 @@ export function createImportExport(refs, getUi, themesApi) {
       ui.renderSentimentSwatches();
       ui.renderDivergentSwatches();
       saveState();
+      replaceHashFromStateNow();
       updateThemeStatus();
       updateJsonPreview();
 
@@ -320,6 +322,7 @@ export function createImportExport(refs, getUi, themesApi) {
         ui.renderDivergentSwatches();
         ui.updateOptionalSectionsVisibility();
         saveState();
+        replaceHashFromStateNow();
 
         const name = (state.name || '').trim();
         if (name && themeComboList) {

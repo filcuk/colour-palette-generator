@@ -11,7 +11,8 @@ import {
   state,
   saveState,
   saveSavedThemes,
-  setAfterSaveStateHook
+  setAfterSaveStateHook,
+  replaceHashFromStateNow
 } from './state.js';
 
 export let savedThemes = [];
@@ -235,6 +236,7 @@ export function createThemesController(refs, getUi, io, opts = {}) {
     if (activeSavedThemeIndex === -1)
       activeSavedThemeIndex = savedThemes.findIndex(t => t.name === theme.name);
     saveState();
+    replaceHashFromStateNow();
     updateThemeStatus();
   }
 
