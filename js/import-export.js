@@ -507,25 +507,37 @@ export function createImportExport(refs, getUi, themesApi) {
 
   let dragDepth = 0;
   if (dropzone) {
-    ['dragenter', 'dragover'].forEach(ev => window.addEventListener(ev, (e) => {
-      e.preventDefault(); e.stopPropagation();
+    function clearDragOverlay() {
+      dragDepth = 0;
+      dropzone.classList.remove('dragover', 'fullscreen');
+    }
+    window.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       dragDepth++;
       dropzone.classList.add('dragover', 'fullscreen');
-    }));
-    ['dragleave', 'drop'].forEach(ev => window.addEventListener(ev, (e) => {
-      e.preventDefault(); e.stopPropagation();
-      dragDepth = Math.max(0, dragDepth - 1);
-      if (dragDepth === 0) {
-        dropzone.classList.remove('dragover', 'fullscreen');
-      }
-    }));
-    dropzone.addEventListener('dragover', (e) => {
+    });
+    window.addEventListener('dragover', (e) => {
       e.preventDefault();
+      e.stopPropagation();
+    });
+    window.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) clearDragOverlay();
+    });
+    window.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      clearDragOverlay();
+    });
+    window.addEventListener('dragend', () => {
+      clearDragOverlay();
     });
     dropzone.addEventListener('drop', (e) => {
       e.preventDefault(); e.stopPropagation();
-      dragDepth = 0;
-      dropzone.classList.remove('dragover', 'fullscreen');
+      clearDragOverlay();
       const file = e.dataTransfer?.files?.[0];
       if (!file) return;
       const name = (file.name || '').toLowerCase();
