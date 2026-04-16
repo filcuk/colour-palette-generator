@@ -24,7 +24,7 @@ const STRUCTURAL_SWATCH_HELP = [
 ];
 
 /**
- * Swatches, contrast summary, count slider, optional rows, and colour picker.
+ * Swatches, count slider, optional rows, and colour picker.
  */
 export function initUi(refs, themesApi, ioApi) {
   const {
@@ -41,7 +41,6 @@ export function initUi(refs, themesApi, ioApi) {
     divergentNullEnabledCb,
     countSlider,
     countValue,
-    summaryEl,
     themeNameEl,
     svgHideColourLabelsCb,
     contrastTooltipEl,
@@ -166,7 +165,6 @@ function renderSwatches(n) {
   badgesWraps = wraps.map(w => w.querySelector('.swatch-contrast'));
   bindSwatchInputs(wraps, inputs, badgesWraps, 'theme', state.colors);
   updateActiveClass();
-  updateSummary();
 }
 
 function renderSentimentSwatches() {
@@ -183,7 +181,6 @@ function renderSentimentSwatches() {
   sentimentBadgesWraps = sentimentWraps.map(() => null);
   bindSwatchInputs(sentimentWraps, sentimentInputs, sentimentBadgesWraps, 'sentiment', state.sentimentColors);
   updateActiveClass();
-  updateSummary();
 }
 
 function renderDivergentSwatches() {
@@ -201,7 +198,6 @@ function renderDivergentSwatches() {
   divergentBadgesWraps = divergentWraps.map(() => null);
   bindSwatchInputs(divergentWraps, divergentInputs, divergentBadgesWraps, 'divergent', state.divergentColors);
   updateActiveClass();
-  updateSummary();
 }
 
 function renderStructuralSwatches() {
@@ -233,7 +229,6 @@ function renderStructuralSwatches() {
     wrap.addEventListener('mouseleave', hideContrastTooltip);
   });
   updateActiveClass();
-  updateSummary();
 }
 
 function getActiveInput() {
@@ -327,7 +322,7 @@ function updateContrast(hex, contrastEl) {
         <span class="swatch-contrast-line"><span class="swatch-contrast-lbl">B</span><span class="swatch-contrast-sym ${clsB}">${symB}</span></span>
         <span class="swatch-contrast-line"><span class="swatch-contrast-lbl">W</span><span class="swatch-contrast-sym ${clsW}">${symW}</span></span>
       </div>`;
-  const tooltip = `Black ${rB.toFixed(2)}:1 (${passB ? 'PASS' : 'FAIL'})\nWhite ${rW.toFixed(2)}:1 (${passW ? 'PASS' : 'FAIL'})`;
+  const tooltip = `Contrast ≥ 4.5:1?\nBlack ${rB.toFixed(2)}:1 - ${passB ? 'pass' : 'fail'}\nWhite ${rW.toFixed(2)}:1 - ${passW ? 'pass' : 'fail'}`;
   contrastEl.dataset.tooltip = tooltip;
 }
 
@@ -362,7 +357,6 @@ function applyPreview(input, contrastEl) {
     input.style.color = '#111';
     updateContrast(null, contrastEl);
   }
-  updateSummary();
 }
 
 function normalizeInput(input, contrastEl) {
@@ -372,29 +366,6 @@ function normalizeInput(input, contrastEl) {
     applyPreview(input, contrastEl);
   } else {
     input.classList.add('invalid');
-  }
-}
-
-function updateSummary() {
-  if (!summaryEl) return;
-  let passB = 0, failB = 0, passW = 0, failW = 0;
-  const allInputs = [...(inputs || [])];
-  allInputs.forEach(inp => {
-    if (!inp) return;
-    const hex = toFullHex(inp.value || '');
-    if (!hex) return;
-    const rB = contrastRatio('#000000', hex);
-    const rW = contrastRatio('#FFFFFF', hex);
-    if (rB >= 4.5) passB++; else failB++;
-    if (rW >= 4.5) passW++; else failW++;
-  });
-  const totalB = passB + failB;
-  const totalW = passW + failW;
-  if (totalB === 0 && totalW === 0) summaryEl.textContent = 'Contrast summary: —';
-  else {
-    const pctB = totalB ? Math.round((passB / totalB) * 100) : 0;
-    const pctW = totalW ? Math.round((passW / totalW) * 100) : 0;
-    summaryEl.textContent = `Testing contrast ≥ 4.5:1 — Black ${pctB}% · White ${pctW}%.`;
   }
 }
 
@@ -437,7 +408,6 @@ if (sentimentEnabledCb) {
   sentimentEnabledCb.addEventListener('change', () => {
     state.sentimentEnabled = sentimentEnabledCb.checked;
     updateOptionalSectionsVisibility();
-    updateSummary();
     saveState();
     ioApi.updateJsonPreview();
     ioApi.updateSvgPreview();
@@ -447,7 +417,6 @@ if (divergentEnabledCb) {
   divergentEnabledCb.addEventListener('change', () => {
     state.divergentEnabled = divergentEnabledCb.checked;
     updateOptionalSectionsVisibility();
-    updateSummary();
     saveState();
     ioApi.updateJsonPreview();
     ioApi.updateSvgPreview();
@@ -457,7 +426,6 @@ if (structuralEnabledCb) {
   structuralEnabledCb.addEventListener('change', () => {
     state.structuralEnabled = structuralEnabledCb.checked;
     updateOptionalSectionsVisibility();
-    updateSummary();
     saveState();
     ioApi.updateJsonPreview();
     ioApi.updateSvgPreview();
@@ -471,7 +439,6 @@ if (divergentNullEnabledCb) {
     }
     renderDivergentSwatches();
     updateOptionalSectionsVisibility();
-    updateSummary();
     saveState();
     ioApi.updateJsonPreview();
     ioApi.updateSvgPreview();

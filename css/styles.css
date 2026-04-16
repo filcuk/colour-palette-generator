@@ -591,12 +591,6 @@ input[type="file"] {
   to { transform: rotate(360deg); }
 }
 
-.summary {
-  margin-top: 10px;
-  font: 12px/1.2 var(--font);
-  color: #333
-}
-
 .page-footer {
   margin-top: 24px;
   padding-top: 12px;

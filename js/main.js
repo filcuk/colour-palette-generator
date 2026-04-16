@@ -57,7 +57,6 @@ const refs = {
   jsonCopyBtn: document.getElementById('jsonCopyBtn'),
   exportJsonBtn: document.getElementById('exportJsonBtn'),
   importJsonBtn: document.getElementById('importJsonBtn'),
-  summaryEl: document.getElementById('summary'),
   themeNameEl: document.getElementById('themeName'),
   resetBtn: document.getElementById('resetBtn'),
   themeComboTrigger: document.getElementById('themeComboTrigger'),
