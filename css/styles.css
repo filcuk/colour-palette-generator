@@ -208,6 +208,12 @@ h1 {
   margin: 0;
 }
 
+hr.colours-picker-divider {
+  border: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  margin: 14px 0 0;
+}
+
 .swatch-wrap {
   display: inline-flex;
   flex-direction: column;

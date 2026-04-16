@@ -476,6 +476,10 @@ export function createImportExport(refs, getUi, themesApi) {
   }
   if (svgCopyBtn) {
     svgCopyBtn.addEventListener('click', () => {
+      showToast(
+        'Browser security settings may stop SVG from pasting correctly after copy. If paste fails, use Download instead.',
+        { theme: 'warning', durationMs: 6500 }
+      );
       const svg = buildExportSvgString(buildExportSvgOptsFromState(false));
       const done = () => showCopyButtonFeedback(svgCopyBtn, true);
       const fail = () => showCopyButtonFeedback(svgCopyBtn, false);
