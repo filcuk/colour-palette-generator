@@ -2,9 +2,12 @@ import { describe, it, expect } from 'vitest';
 import {
   buildExportSvgString,
   buildThemeJsonPayloadFromState,
+  structuralObjectFromResolved,
   DEFAULTS,
   DEFAULTS_SENTIMENT,
-  DEFAULTS_DIVERGENT
+  DEFAULTS_DIVERGENT,
+  DEFAULTS_STRUCTURAL,
+  STRUCTURAL_KEYS
 } from '../../js/colour-export.js';
 
 function minimalState(overrides = {}) {
@@ -16,6 +19,8 @@ function minimalState(overrides = {}) {
     divergentColors: DEFAULTS_DIVERGENT.slice(),
     sentimentEnabled: false,
     divergentEnabled: false,
+    structuralEnabled: false,
+    structuralColors: DEFAULTS_STRUCTURAL.slice(),
     ...overrides
   };
 }
@@ -53,6 +58,25 @@ describe('buildThemeJsonPayloadFromState', () => {
     expect(p).not.toHaveProperty('neutral');
   });
 
+  it('includes Power BI structural keys when structural section is enabled', () => {
+    const p = buildThemeJsonPayloadFromState(
+      minimalState({
+        structuralEnabled: true,
+        structuralColors: ['#111111', '#222222', '#333333', '#444444', '#555555', '#666666', '#777777']
+      })
+    );
+    for (const k of STRUCTURAL_KEYS) {
+      expect(p[k]).toMatch(/^#/);
+    }
+    expect(p.firstLevelElements).toBe('#111111');
+    expect(p.tableAccent).toBe('#777777');
+  });
+
+  it('omits structural keys when structural section is disabled', () => {
+    const p = buildThemeJsonPayloadFromState(minimalState());
+    expect(p).not.toHaveProperty('firstLevelElements');
+  });
+
   it('omits null key when divergent null is disabled', () => {
     const p = buildThemeJsonPayloadFromState(
       minimalState({ divergentEnabled: true, divergentNullEnabled: false })
@@ -84,7 +108,7 @@ describe('buildExportSvgString', () => {
     expect(metaMatch).toBeTruthy();
     const meta = JSON.parse(metaMatch[1]);
     expect(meta.app).toBe('colour-palette');
-    expect(meta.version).toBe(7);
+    expect(meta.version).toBe(8);
     expect(meta.colors).toEqual(themeColors);
     expect(meta.name).toBe('Unit');
   });
@@ -149,5 +173,34 @@ describe('buildExportSvgString', () => {
     expect(metaMatch).toBeTruthy();
     const meta = JSON.parse(metaMatch[1]);
     expect(meta.divergentColors).toHaveLength(3);
+  });
+
+  it('embeds structural colours in metadata only when enabled (no extra SVG row)', () => {
+    const structural = structuralObjectFromResolved([
+      '#252423',
+      '#605E5C',
+      '#F3F2F1',
+      '#B3B0AD',
+      '#FFFFFF',
+      '#C8C6C4',
+      '#118DFF'
+    ]);
+    const svg = buildExportSvgString({
+      themeColors: ['#ABCDEF'],
+      sentiment: [],
+      divergent: [],
+      themeName: 'S',
+      sentimentEnabled: false,
+      divergentEnabled: false,
+      structuralEnabled: true,
+      structural,
+      hideColourLabels: false,
+      forPreview: false
+    });
+    expect(svg).not.toContain('>Structural<');
+    const metaMatch = svg.match(/<metadata id="palette-meta">([\s\S]*?)<\/metadata>/);
+    expect(metaMatch).toBeTruthy();
+    const meta = JSON.parse(metaMatch[1]);
+    expect(meta.structural).toEqual(structural);
   });
 });

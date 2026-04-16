@@ -37,8 +37,11 @@ const refs = {
   rowDivergentEl: document.getElementById('rowDivergent'),
   rowSentimentWrapEl: document.getElementById('rowSentimentWrap'),
   rowDivergentWrapEl: document.getElementById('rowDivergentWrap'),
+  rowStructuralEl: document.getElementById('rowStructural'),
+  rowStructuralWrapEl: document.getElementById('rowStructuralWrap'),
   sentimentEnabledCb: document.getElementById('sentimentEnabled'),
   divergentEnabledCb: document.getElementById('divergentEnabled'),
+  structuralEnabledCb: document.getElementById('structuralEnabled'),
   divergentNullEnabledCb: document.getElementById('divergentNullEnabled'),
   countSlider: document.getElementById('countSlider'),
   countValue: document.getElementById('countValue'),
@@ -96,6 +99,7 @@ function runResetAndReseed() {
   ui.setCount(state.count);
   ui.renderSentimentSwatches();
   ui.renderDivergentSwatches();
+  ui.renderStructuralSwatches();
   ui.updateOptionalSectionsVisibility();
   ui.setActive('theme', 0);
   themes.ensureInitialThemeIfEmpty();
@@ -149,6 +153,7 @@ savedThemes.push(...loadSavedThemes());
 ui.setCount(state.count);
 ui.renderSentimentSwatches();
 ui.renderDivergentSwatches();
+ui.renderStructuralSwatches();
 ui.updateOptionalSectionsVisibility();
 ui.setActive('theme', 0);
 const pickerSetSelect = document.getElementById('pickerSetSelect');

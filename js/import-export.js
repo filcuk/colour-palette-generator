@@ -2,7 +2,9 @@ import {
   buildExportSvgString,
   buildThemeJsonPayloadFromState,
   DEFAULTS_SENTIMENT,
-  DEFAULTS_DIVERGENT
+  DEFAULTS_DIVERGENT,
+  DEFAULTS_STRUCTURAL,
+  STRUCTURAL_KEYS
 } from './colour-export.js';
 import { toFullHex, sanitizeNameForFile } from './colour-math.js';
 import { clampThemeName } from './theme-name.js';
@@ -112,6 +114,14 @@ export function parseSvgPalette(text) {
               if (h) base[i] = h;
             }
             out.divergentColors = base;
+          }
+          if (meta.structural && typeof meta.structural === 'object') {
+            const merged = {};
+            for (const k of STRUCTURAL_KEYS) {
+              const h = toFullHex(meta.structural[k]);
+              if (h) merged[k] = h;
+            }
+            if (STRUCTURAL_KEYS.some(k => merged[k])) out.structural = merged;
           }
           return out;
         }
@@ -293,9 +303,28 @@ export function createImportExport(refs, getUi, themesApi) {
         } else {
           state.divergentEnabled = false;
         }
+        let anyStructural = false;
+        const mergedStructural = DEFAULTS_STRUCTURAL.slice();
+        for (let i = 0; i < STRUCTURAL_KEYS.length; i++) {
+          const k = STRUCTURAL_KEYS[i];
+          if (data[k] != null && data[k] !== '') {
+            const h = toFullHex(data[k]);
+            if (h) {
+              mergedStructural[i] = h;
+              anyStructural = true;
+            }
+          }
+        }
+        if (anyStructural) {
+          state.structuralEnabled = true;
+          state.structuralColors = mergedStructural;
+        } else {
+          state.structuralEnabled = false;
+        }
         ui.updateOptionalSectionsVisibility();
         ui.renderSentimentSwatches();
         ui.renderDivergentSwatches();
+        ui.renderStructuralSwatches();
         saveState();
         replaceHashFromStateNow();
         updateThemeStatus();
@@ -373,8 +402,29 @@ export function createImportExport(refs, getUi, themesApi) {
           } else {
             state.divergentEnabled = false;
           }
+          if (parsed.structural && typeof parsed.structural === 'object') {
+            const next = DEFAULTS_STRUCTURAL.slice();
+            let any = false;
+            for (let i = 0; i < STRUCTURAL_KEYS.length; i++) {
+              const k = STRUCTURAL_KEYS[i];
+              const h = toFullHex(parsed.structural[k]);
+              if (h) {
+                next[i] = h;
+                any = true;
+              }
+            }
+            if (any) {
+              state.structuralEnabled = true;
+              state.structuralColors = next;
+            } else {
+              state.structuralEnabled = false;
+            }
+          } else {
+            state.structuralEnabled = false;
+          }
           ui.renderSentimentSwatches();
           ui.renderDivergentSwatches();
+          ui.renderStructuralSwatches();
           ui.updateOptionalSectionsVisibility();
           saveState();
           replaceHashFromStateNow();

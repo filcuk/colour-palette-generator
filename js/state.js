@@ -3,7 +3,10 @@ import { clampThemeName } from './theme-name.js';
 import {
   DEFAULTS,
   DEFAULTS_SENTIMENT,
-  DEFAULTS_DIVERGENT
+  DEFAULTS_DIVERGENT,
+  DEFAULTS_STRUCTURAL,
+  getStructuralColorsResolved,
+  structuralObjectFromResolved
 } from './colour-export.js';
 
 export const STORAGE_KEY = 'colour-palette.v2';
@@ -17,6 +20,8 @@ export const state = {
   divergentColors: DEFAULTS_DIVERGENT.slice(),
   sentimentEnabled: false,
   divergentEnabled: false,
+  structuralColors: DEFAULTS_STRUCTURAL.slice(),
+  structuralEnabled: false,
   /** When false, the null swatch is hidden and omitted from Power BI JSON / SVG. */
   divergentNullEnabled: true,
   svgHideColourLabels: false,
@@ -49,6 +54,7 @@ export function buildExportSvgOptsFromState(forPreview) {
     state.divergentEnabled && state.divergentNullEnabled === false
       ? fullDiv.slice(0, 3)
       : fullDiv;
+  const structuralResolved = getStructuralColorsResolved(state);
   return {
     themeColors: getThemeColorsFromState(),
     sentiment: getSentimentColorsResolved(),
@@ -56,6 +62,8 @@ export function buildExportSvgOptsFromState(forPreview) {
     themeName: state.name,
     sentimentEnabled: state.sentimentEnabled,
     divergentEnabled: state.divergentEnabled,
+    structuralEnabled: state.structuralEnabled,
+    structural: structuralObjectFromResolved(structuralResolved),
     hideColourLabels: !!state.svgHideColourLabels,
     forPreview
   };
@@ -84,6 +92,8 @@ export function saveState(options = {}) {
       divergentOrder: 'mcmn',
       sentimentEnabled: !!state.sentimentEnabled,
       divergentEnabled: !!state.divergentEnabled,
+      structuralColors: getStructuralColorsResolved(state).slice(),
+      structuralEnabled: !!state.structuralEnabled,
       divergentNullEnabled: state.divergentNullEnabled !== false,
       svgHideColourLabels: !!state.svgHideColourLabels
     };
@@ -114,15 +124,24 @@ export function loadState() {
     if (data.divergentOrder !== 'mcmn' && Array.isArray(data.divergentColors) && data.divergentColors.length >= 4) {
       divergentColors = migrateLegacyDivergentOrder(divergentColors);
     }
+    let structuralColors = DEFAULTS_STRUCTURAL.slice();
+    if (Array.isArray(data.structuralColors) && data.structuralColors.length >= 7) {
+      for (let i = 0; i < 7; i++) {
+        const h = toFullHex(data.structuralColors[i]);
+        if (h) structuralColors[i] = h;
+      }
+    }
     return {
       count,
       name: (data.name || '').toString(),
       colors,
       sentimentColors,
       divergentColors,
+      structuralColors,
       divergentOrder: 'mcmn',
       sentimentEnabled: data.sentimentEnabled === true,
       divergentEnabled: data.divergentEnabled === true,
+      structuralEnabled: data.structuralEnabled === true,
       divergentNullEnabled: data.divergentNullEnabled !== false,
       svgHideColourLabels: data.svgHideColourLabels === true
     };
@@ -146,6 +165,10 @@ function stateToHashPayload() {
     payload.dvV = 2;
     if (state.divergentNullEnabled === false) payload.dn = false;
   }
+  if (state.structuralEnabled) {
+    payload.stc = (state.structuralColors || DEFAULTS_STRUCTURAL).slice(0, 7).map(c => (toFullHex(c) || '').slice(1) || '000000');
+    payload.ste = true;
+  }
   return payload;
 }
 export function hashPayloadToStoredShape(p) {
@@ -168,15 +191,25 @@ export function hashPayloadToStoredShape(p) {
   if (p.de === true && p.dvV === 1 && Array.isArray(p.dv) && p.dv.length >= 4) {
     divergentColors = migrateLegacyDivergentOrder(divergentColors);
   }
+  let structuralColors = DEFAULTS_STRUCTURAL.slice();
+  if (Array.isArray(p.stc) && p.stc.length >= 7) {
+    for (let i = 0; i < 7; i++) {
+      const x = p.stc[i];
+      const h = typeof x === 'string' && x.length >= 6 ? '#' + x.replace(/^#/, '').slice(0, 6) : null;
+      if (h) structuralColors[i] = h;
+    }
+  }
   return {
     count,
     name: clampThemeName(p.n != null ? String(p.n) : ''),
     colors: colors.length ? colors : [DEFAULTS[0]],
     sentimentColors: sentimentColors.length === 3 ? sentimentColors : DEFAULTS_SENTIMENT.slice(),
     divergentColors: divergentColors.length === 4 ? divergentColors : DEFAULTS_DIVERGENT.slice(),
+    structuralColors,
     divergentOrder: p.de === true ? 'mcmn' : undefined,
     sentimentEnabled: p.se === true,
     divergentEnabled: p.de === true,
+    structuralEnabled: p.ste === true,
     divergentNullEnabled: p.de === true ? p.dn !== false : undefined
   };
 }
@@ -264,6 +297,16 @@ export function mergeStoredIntoState(stored) {
   }
   if (stored.sentimentEnabled !== undefined) state.sentimentEnabled = stored.sentimentEnabled === true;
   if (stored.divergentEnabled !== undefined) state.divergentEnabled = stored.divergentEnabled === true;
+  if (stored.structuralColors && stored.structuralColors.length >= 7) {
+    const next = DEFAULTS_STRUCTURAL.slice();
+    const src = stored.structuralColors.slice(0, 7);
+    for (let i = 0; i < src.length; i++) {
+      const h = toFullHex(src[i]);
+      if (h) next[i] = h;
+    }
+    state.structuralColors = next;
+  }
+  if (stored.structuralEnabled !== undefined) state.structuralEnabled = stored.structuralEnabled === true;
   if (stored.divergentNullEnabled !== undefined) {
     state.divergentNullEnabled = Boolean(stored.divergentNullEnabled);
   }
@@ -305,6 +348,8 @@ export function resetStateData() {
   state.divergentColors = DEFAULTS_DIVERGENT.slice();
   state.sentimentEnabled = false;
   state.divergentEnabled = false;
+  state.structuralColors = DEFAULTS_STRUCTURAL.slice();
+  state.structuralEnabled = false;
   state.divergentNullEnabled = true;
   state.svgHideColourLabels = false;
   state.activeSection = 'theme';

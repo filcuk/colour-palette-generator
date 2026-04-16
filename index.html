@@ -25,7 +25,7 @@
     <div class="features-guide-panel">
       <ul class="features-guide-list">
         <li><strong>🧮 Variable colour count</strong>: pick how many theme colours you need</li>
-        <li><strong>📊 Sentiment and divergent colours</strong>: with gradient preview & export</li>
+        <li><strong>📊 Sentiment, divergent and structural colours</strong>: with gradient preview & export</li>
         <li><strong>⌨️ Flexible inputs</strong>: including HEX, RGB, CYMK, colour picker, and predefined colour sets</li>
         <li><strong>🔲 Contrast checks</strong>: validation for black and white text at 4.5:1 or higher</li>
         <li><strong>🎨 Theme management</strong>: multiple named palettes in this browser with automatic saving</li>
@@ -94,6 +94,16 @@
           </label>
         </div>
         <div class="row row-fixed" id="rowDivergent" role="group" aria-label="Divergent color swatches"></div>
+      </div>
+    </div>
+    <div class="colour-block" id="blockStructural">
+      <label class="colour-block-heading">
+        <span class="colour-block-title">Structural colours</span>
+        <input type="checkbox" id="structuralEnabled" class="toggle-checkbox" aria-label="Toggle Structural colours" />
+        <span class="toggle-icon" aria-hidden="true"></span>
+      </label>
+      <div class="optional-content" id="rowStructuralWrap">
+        <div class="row row-fixed" id="rowStructural" role="group" aria-label="Structural color swatches"></div>
       </div>
     </div>
     <p class="callout-info" id="summary" style="margin-top:10px; margin-bottom:10px;">ℹ️ Contrast summary: —</p>

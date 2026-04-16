@@ -12,6 +12,17 @@ import {
 } from './colour-math.js';
 import { state, saveState, mergeStoredIntoState } from './state.js';
 
+/** One-line hints for Power BI structural colours (hover); see MS “Set structural colors”. */
+const STRUCTURAL_SWATCH_HELP = [
+  'Main text & icons on visuals',
+  'Secondary text & labels',
+  'Light borders / chrome',
+  'Dividers & muted detail',
+  'Report page background',
+  'Pane-style background areas',
+  'Table grids & accent lines'
+];
+
 /**
  * Swatches, contrast summary, count slider, optional rows, and colour picker.
  */
@@ -20,10 +31,13 @@ export function initUi(refs, themesApi, ioApi) {
     rowEl,
     rowSentimentEl,
     rowDivergentEl,
+    rowStructuralEl,
     rowSentimentWrapEl,
     rowDivergentWrapEl,
+    rowStructuralWrapEl,
     sentimentEnabledCb,
     divergentEnabledCb,
+    structuralEnabledCb,
     divergentNullEnabledCb,
     countSlider,
     countValue,
@@ -49,6 +63,7 @@ export function initUi(refs, themesApi, ioApi) {
 let wraps = [], inputs = [], badgesWraps = [];
 let sentimentWraps = [], sentimentInputs = [], sentimentBadgesWraps = [];
 let divergentWraps = [], divergentInputs = [], divergentBadgesWraps = [];
+let structuralWraps = [], structuralInputs = [], structuralBadgesWraps = [];
 let ph = 0, ps = 1, pv = 1; // picker HSV
 // ========= Rendering =========
 function escapeHtml(s) {
@@ -59,8 +74,11 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
-/** @param {string} [meaningLabel] — when set, shown above the swatch (Sentiment / Divergent). */
-function swatchHTML(section, i, value, ariaLabel, meaningLabel) {
+/**
+ * @param {string} [meaningLabel] — when set, shown above the swatch (Sentiment / Divergent).
+ * @param {boolean} [includeContrastStrip=true] — structural swatches omit B/W contrast UI.
+ */
+function swatchHTML(section, i, value, ariaLabel, meaningLabel, includeContrastStrip = true) {
   const vAttr = value ? ` value="${value}"` : '';
   const isActive = state.activeSection === section && state.activeIndex === i;
   const activeCls = isActive ? ' active' : '';
@@ -71,23 +89,35 @@ function swatchHTML(section, i, value, ariaLabel, meaningLabel) {
     meaningLabel != null && meaningLabel !== ''
       ? `<span class="swatch-meaning-label">${escapeHtml(meaningLabel)}</span>`
       : '';
+  const contrastHtml = includeContrastStrip
+    ? '<div class="swatch-contrast" aria-hidden="true" title=""></div>'
+    : '';
   return `
     <div class="swatch-wrap${activeCls}${optionalCls}" data-section="${section}" data-index="${i}">
       ${meaningSpan}
       <input class="swatch-input" aria-label="${labelEsc}" placeholder="#RRGGBB"${vAttr} data-section="${section}" data-index="${i}" />
-      <div class="swatch-contrast" aria-hidden="true" title=""></div>
+      ${contrastHtml}
     </div>
   `;
 }
 
-function showContrastTooltip(contrastEl) {
-  const text = contrastEl.dataset.tooltip;
-  if (!contrastTooltipEl || !text) return;
+/**
+ * @param {HTMLElement} anchorEl - element whose box positions the tooltip (usually under it).
+ * @param {string} [textOverride] - if set, used instead of `anchorEl.dataset.tooltip`.
+ */
+function showContrastTooltip(anchorEl, textOverride) {
+  const text =
+    textOverride != null && textOverride !== ''
+      ? String(textOverride)
+      : anchorEl && anchorEl.dataset
+        ? anchorEl.dataset.tooltip
+        : '';
+  if (!contrastTooltipEl || !text || !anchorEl) return;
   contrastTooltipEl.textContent = text;
   contrastTooltipEl.classList.add('visible');
   contrastTooltipEl.setAttribute('aria-hidden', 'false');
   const offset = 8;
-  const rect = contrastEl.getBoundingClientRect();
+  const rect = anchorEl.getBoundingClientRect();
   const x = rect.left + rect.width / 2;
   const y = rect.bottom + offset;
   contrastTooltipEl.style.left = x + 'px';
@@ -168,27 +198,67 @@ function renderDivergentSwatches() {
   updateSummary();
 }
 
+function renderStructuralSwatches() {
+  if (!rowStructuralEl) return;
+  let html = '';
+  const labels = [
+    'First Level',
+    'Second Sevel',
+    'Third Level',
+    'Fourth Level',
+    'Background',
+    'Secondary Background',
+    'Table Accent'
+  ];
+  for (let i = 0; i < 7; i++) {
+    const val = toFullHex(state.structuralColors[i]) || '';
+    html += swatchHTML('structural', i, val, labels[i], labels[i], false);
+  }
+  rowStructuralEl.innerHTML = html;
+  structuralWraps = Array.from(rowStructuralEl.querySelectorAll('.swatch-wrap'));
+  structuralInputs = structuralWraps.map(w => w.querySelector('.swatch-input'));
+  structuralBadgesWraps = structuralWraps.map(() => null);
+  bindSwatchInputs(structuralWraps, structuralInputs, structuralBadgesWraps, 'structural', state.structuralColors);
+  structuralWraps.forEach((wrap, i) => {
+    const inp = wrap.querySelector('.swatch-input');
+    const help = STRUCTURAL_SWATCH_HELP[i];
+    if (!inp || !help) return;
+    wrap.addEventListener('mouseenter', () => showContrastTooltip(inp, help));
+    wrap.addEventListener('mouseleave', hideContrastTooltip);
+  });
+  updateActiveClass();
+  updateSummary();
+}
+
 function getActiveInput() {
   if (state.activeSection === 'theme') return inputs[state.activeIndex];
   if (state.activeSection === 'sentiment') return sentimentInputs ? sentimentInputs[state.activeIndex] : null;
   if (state.activeSection === 'divergent') return divergentInputs ? divergentInputs[state.activeIndex] : null;
+  if (state.activeSection === 'structural') return structuralInputs ? structuralInputs[state.activeIndex] : null;
   return null;
 }
 function getActiveBadgesWrap() {
   if (state.activeSection === 'theme') return badgesWraps[state.activeIndex];
   if (state.activeSection === 'sentiment') return sentimentBadgesWraps ? sentimentBadgesWraps[state.activeIndex] : null;
   if (state.activeSection === 'divergent') return divergentBadgesWraps ? divergentBadgesWraps[state.activeIndex] : null;
+  if (state.activeSection === 'structural') return structuralBadgesWraps ? structuralBadgesWraps[state.activeIndex] : null;
   return null;
 }
 function getActiveStateArray() {
   if (state.activeSection === 'theme') return state.colors;
   if (state.activeSection === 'sentiment') return state.sentimentColors;
   if (state.activeSection === 'divergent') return state.divergentColors;
+  if (state.activeSection === 'structural') return state.structuralColors;
   return state.colors;
 }
 
 function updateActiveClass() {
-  const allWraps = [...(wraps || []), ...(sentimentWraps || []), ...(divergentWraps || [])];
+  const allWraps = [
+    ...(wraps || []),
+    ...(sentimentWraps || []),
+    ...(divergentWraps || []),
+    ...(structuralWraps || [])
+  ];
   allWraps.forEach(w => {
     if (!w) return;
     const section = w.dataset.section;
@@ -205,7 +275,9 @@ function setActive(section, index) {
         ? state.divergentNullEnabled !== false
           ? 3
           : 2
-        : 2;
+        : section === 'structural'
+          ? 6
+          : 2;
   const i = Math.max(0, Math.min(maxIdx, index));
   state.activeSection = section;
   state.activeIndex = i;
@@ -237,7 +309,14 @@ function updateContrast(hex, contrastEl) {
 function applyPreview(input, contrastEl) {
   const section = input.dataset.section || 'theme';
   const idx = parseInt(input.dataset.index, 10) || 0;
-  const arr = section === 'theme' ? state.colors : section === 'sentiment' ? state.sentimentColors : state.divergentColors;
+  const arr =
+    section === 'theme'
+      ? state.colors
+      : section === 'sentiment'
+        ? state.sentimentColors
+        : section === 'divergent'
+          ? state.divergentColors
+          : state.structuralColors;
   const hex = toPreviewableHex(input.value || '');
 
   if (hex) {
@@ -301,11 +380,14 @@ function updateSummary() {
 function updateOptionalSectionsVisibility() {
   if (sentimentEnabledCb) sentimentEnabledCb.checked = !!state.sentimentEnabled;
   if (divergentEnabledCb) divergentEnabledCb.checked = !!state.divergentEnabled;
+  if (structuralEnabledCb) structuralEnabledCb.checked = !!state.structuralEnabled;
   if (divergentNullEnabledCb) divergentNullEnabledCb.checked = state.divergentNullEnabled !== false;
   if (rowSentimentWrapEl) rowSentimentWrapEl.classList.toggle('optional-hidden', !state.sentimentEnabled);
   if (rowDivergentWrapEl) rowDivergentWrapEl.classList.toggle('optional-hidden', !state.divergentEnabled);
+  if (rowStructuralWrapEl) rowStructuralWrapEl.classList.toggle('optional-hidden', !state.structuralEnabled);
   if (state.activeSection === 'sentiment' && !state.sentimentEnabled) setActive('theme', 0);
   if (state.activeSection === 'divergent' && !state.divergentEnabled) setActive('theme', 0);
+  if (state.activeSection === 'structural' && !state.structuralEnabled) setActive('theme', 0);
   if (state.activeSection === 'divergent' && state.divergentNullEnabled === false && state.activeIndex > 2) {
     setActive('divergent', 2);
   }
@@ -350,6 +432,16 @@ if (divergentEnabledCb) {
     ioApi.updateSvgPreview();
   });
 }
+if (structuralEnabledCb) {
+  structuralEnabledCb.addEventListener('change', () => {
+    state.structuralEnabled = structuralEnabledCb.checked;
+    updateOptionalSectionsVisibility();
+    updateSummary();
+    saveState();
+    ioApi.updateJsonPreview();
+    ioApi.updateSvgPreview();
+  });
+}
 if (divergentNullEnabledCb) {
   divergentNullEnabledCb.addEventListener('change', () => {
     state.divergentNullEnabled = divergentNullEnabledCb.checked;
@@ -376,6 +468,9 @@ if (svgHideColourLabelsCb) {
 if (typeof normalizeBtn !== 'undefined' && normalizeBtn) {
   normalizeBtn.addEventListener('click', () => {
     inputs.forEach((inp, i) => { normalizeInput(inp, badgesWraps[i]); });
+    if (state.structuralEnabled && structuralInputs) {
+      structuralInputs.forEach((inp, i) => { normalizeInput(inp, structuralBadgesWraps[i]); });
+    }
     saveState();
   });
 }
@@ -694,6 +789,7 @@ if (pickerShadesEl) {
     setCount(state.count);
     renderSentimentSwatches();
     renderDivergentSwatches();
+    renderStructuralSwatches();
     updateOptionalSectionsVisibility();
     setActive('theme', 0);
     themesApi.updateThemeStatus();
@@ -709,6 +805,7 @@ if (pickerShadesEl) {
     renderSwatches,
     renderSentimentSwatches,
     renderDivergentSwatches,
+    renderStructuralSwatches,
     updateOptionalSectionsVisibility,
     setActive,
     applyStoredState,

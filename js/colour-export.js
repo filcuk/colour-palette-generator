@@ -11,6 +11,20 @@ export const DEFAULTS_SENTIMENT = ['#E53935', '#757575', '#43A047'];
 /** State order + JSON keys: maximum, center, minimum, "null" */
 export const DEFAULTS_DIVERGENT = ['#B2182B', '#F7F7F7', '#2166AC', '#757575'];
 
+/** Power BI theme keys, same order as {@link DEFAULTS_STRUCTURAL}. */
+export const STRUCTURAL_KEYS = [
+  'firstLevelElements',
+  'secondLevelElements',
+  'thirdLevelElements',
+  'fourthLevelElements',
+  'background',
+  'secondaryBackground',
+  'tableAccent'
+];
+export const DEFAULTS_STRUCTURAL = [
+  '#252423', '#605E5C', '#F3F2F1', '#B3B0AD', '#FFFFFF', '#C8C6C4', '#118DFF'
+];
+
 const clampHex = s => s.replace(/[^0-9a-f]/gi, '').slice(0, 6).toUpperCase();
 function toFullHex(raw) {
   if (!raw) return null;
@@ -56,6 +70,20 @@ function getDivergentColorsResolved(s) {
   return (s.divergentColors || DEFAULTS_DIVERGENT).slice(0, 4).map((c, i) =>
     toFullHex(c) || toFullHex(DEFAULTS_DIVERGENT[i]) || '#000000');
 }
+export function getStructuralColorsResolved(s) {
+  return STRUCTURAL_KEYS.map((_, i) =>
+    toFullHex((s.structuralColors || DEFAULTS_STRUCTURAL)[i]) ||
+    toFullHex(DEFAULTS_STRUCTURAL[i]) ||
+    '#000000');
+}
+/** Plain object keyed like Power BI theme JSON (for SVG metadata). */
+export function structuralObjectFromResolved(arr) {
+  const o = {};
+  STRUCTURAL_KEYS.forEach((k, i) => {
+    o[k] = arr[i];
+  });
+  return o;
+}
 
 export function buildThemeJsonPayloadFromState(s) {
   const nm = (s.name || '').trim();
@@ -74,6 +102,12 @@ export function buildThemeJsonPayloadFromState(s) {
     payload.minimum = divergent[2];
     if (s.divergentNullEnabled !== false) payload['null'] = divergent[3];
   }
+  if (s.structuralEnabled) {
+    const structural = getStructuralColorsResolved(s);
+    STRUCTURAL_KEYS.forEach((k, i) => {
+      payload[k] = structural[i];
+    });
+  }
   return payload;
 }
 
@@ -85,6 +119,8 @@ export function buildExportSvgString(opts) {
     themeName,
     sentimentEnabled,
     divergentEnabled,
+    structuralEnabled = false,
+    structural = null,
     hideColourLabels = false,
     forPreview = false
   } = opts;
@@ -179,19 +215,21 @@ export function buildExportSvgString(opts) {
     }
   }
 
+  const hasStructuralMeta = structuralEnabled && structural && typeof structural === 'object';
   const meta = {
     app: 'colour-palette',
-    version: 7,
+    version: 8,
     name: (themeName || '').trim(),
     count,
     colors: themeColors,
     ...(sentimentEnabled && sentiment.length === 3 ? { sentimentColors: sentiment } : {}),
-    ...(divergentEnabled && divergent.length >= 3 ? { divergentColors: divergent } : {})
+    ...(divergentEnabled && divergent.length >= 3 ? { divergentColors: divergent } : {}),
+    ...(hasStructuralMeta ? { structural } : {})
   };
   const svgStyle = forPreview ? ' style="max-width:100%;height:auto"' : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${safeTitle}"${svgStyle}>
   <title>${safeTitle}</title>
-  <desc>Theme: ${safeTitle}. Palette exported with ${count} theme swatch(es)${hasSentiment ? ', sentiment row' : ''}${hasDivergent ? ', divergent row' : ''}. Metadata included for re-import.</desc>
+  <desc>Theme: ${safeTitle}. Palette exported with ${count} theme swatch(es)${hasSentiment ? ', sentiment row' : ''}${hasDivergent ? ', divergent row' : ''}${hasStructuralMeta ? ', structural colours in metadata only' : ''}. Metadata included for re-import.</desc>
   <metadata id="palette-meta">${JSON.stringify(meta)}</metadata>
   ${nodes}
 </svg>`;
