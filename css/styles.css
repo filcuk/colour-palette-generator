@@ -257,12 +257,31 @@ h1 {
 }
 
 .swatch-input:focus {
+  box-shadow: 0 6px 22px rgba(0, 0, 0, .10);
+}
+.swatch-input:focus:not([data-section="theme"]) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 22px rgba(0, 0, 0, .10)
 }
 
 .swatch-input.invalid {
   outline: 2px solid #c80000
+}
+
+/* Equal vertical padding → hex stays centred in the full square; hover shifts more space to the bottom (expanded bar) so flex re-centres the text upward — no transform on the swatch. */
+.swatch-wrap[data-section="theme"] .swatch-input {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: normal;
+  padding: 22px 6px 22px 6px;
+  transition: padding-top 0.22s ease, padding-bottom 0.22s ease, box-shadow 0.12s ease, background 0.1s ease;
+}
+
+.swatch-wrap[data-section="theme"]:hover .swatch-input,
+.swatch-wrap[data-section="theme"]:focus-within .swatch-input {
+  padding-top: 16px;
+  padding-bottom: 28px;
 }
 
 /* Optional rows (no B/W contrast strip): symmetric padding, hex centred in the square. */
@@ -277,21 +296,111 @@ h1 {
   line-height: normal;
 }
 
-.swatch-contrast {
+/* Theme colours only: idle = two symbols with white glow; hover whole swatch = panel slides up with B/W labels */
+.swatch-wrap[data-section="theme"] .swatch-contrast {
   position: absolute;
   bottom: 2px;
   left: 2px;
   right: 2px;
-  height: 18px;
+  height: 20px;
+  overflow: hidden;
+  border-radius: 0 0 var(--radius) var(--radius);
+  font: 11px/1 var(--font);
+  font-weight: 600;
+  cursor: default;
+  background: transparent;
+}
+
+.swatch-wrap[data-section="theme"] .swatch-contrast-idle {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 0 0 var(--radius) var(--radius);
-  font: 10px/1 var(--font);
-  font-weight: 600;
-  cursor: default;
+  gap: 12px;
+  z-index: 1;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.swatch-wrap[data-section="theme"] .swatch-contrast-idle .swatch-contrast-sym {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow:
+    0 0 2px #fff,
+    0 0 2px #fff,
+    0 0 6px rgba(255, 255, 255, 0.95),
+    0 0 10px rgba(255, 255, 255, 0.55);
+}
+
+.swatch-wrap[data-section="theme"] .swatch-contrast-sym.pass {
+  color: var(--ok);
+}
+.swatch-wrap[data-section="theme"] .swatch-contrast-sym.fail {
+  color: var(--bad);
+}
+.swatch-wrap[data-section="theme"] .swatch-contrast-sym--muted {
+  color: #777;
+  text-shadow:
+    0 0 1px #fff,
+    0 0 4px rgba(255, 255, 255, 0.9);
+}
+
+.swatch-wrap[data-section="theme"] .swatch-contrast-hover {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.07);
+  z-index: 2;
+  transform: translateY(100%);
+  transition: transform 0.22s ease;
+}
+
+.swatch-wrap[data-section="theme"]:hover .swatch-contrast-hover,
+.swatch-wrap[data-section="theme"]:focus-within .swatch-contrast-hover {
+  transform: translateY(0);
+}
+
+.swatch-wrap[data-section="theme"]:hover .swatch-contrast-idle,
+.swatch-wrap[data-section="theme"]:focus-within .swatch-contrast-idle {
+  opacity: 0;
+}
+
+.swatch-wrap[data-section="theme"] .swatch-contrast-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.swatch-wrap[data-section="theme"] .swatch-contrast-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: #444;
+  letter-spacing: 0.03em;
+}
+
+.swatch-wrap[data-section="theme"] .swatch-contrast-hover .swatch-contrast-sym {
+  text-shadow: none;
+  font-size: 11px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swatch-wrap[data-section="theme"] .swatch-contrast-hover,
+  .swatch-wrap[data-section="theme"] .swatch-contrast-idle,
+  .swatch-wrap[data-section="theme"] .swatch-input {
+    transition: none;
+  }
 }
 .tooltip {
   position: fixed;
@@ -313,17 +422,6 @@ h1 {
   opacity: 1;
   visibility: visible;
 }
-.swatch-contrast span {
-  display: inline-flex;
-  align-items: center;
-}
-.swatch-contrast .pass {
-  color: var(--ok);
-}
-.swatch-contrast .fail {
-  color: var(--bad);
-}
-
 button,
 .import-label {
   background: var(--accent);

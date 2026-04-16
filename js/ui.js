@@ -102,22 +102,24 @@ function swatchHTML(section, i, value, ariaLabel, meaningLabel, includeContrastS
 }
 
 /**
- * @param {HTMLElement} anchorEl - element whose box positions the tooltip (usually under it).
+ * @param {HTMLElement} anchorEl - source for `dataset.tooltip` when `textOverride` is omitted.
  * @param {string} [textOverride] - if set, used instead of `anchorEl.dataset.tooltip`.
+ * @param {HTMLElement} [positionEl] - if set, tooltip is placed under this box (e.g. whole theme swatch).
  */
-function showContrastTooltip(anchorEl, textOverride) {
+function showContrastTooltip(anchorEl, textOverride, positionEl) {
   const text =
     textOverride != null && textOverride !== ''
       ? String(textOverride)
       : anchorEl && anchorEl.dataset
         ? anchorEl.dataset.tooltip
         : '';
-  if (!contrastTooltipEl || !text || !anchorEl) return;
+  const posEl = positionEl || anchorEl;
+  if (!contrastTooltipEl || !text || !anchorEl || !posEl) return;
   contrastTooltipEl.textContent = text;
   contrastTooltipEl.classList.add('visible');
   contrastTooltipEl.setAttribute('aria-hidden', 'false');
   const offset = 8;
-  const rect = anchorEl.getBoundingClientRect();
+  const rect = posEl.getBoundingClientRect();
   const x = rect.left + rect.width / 2;
   const y = rect.bottom + offset;
   contrastTooltipEl.style.left = x + 'px';
@@ -141,8 +143,12 @@ function bindSwatchInputs(wrapsArr, inputsArr, badgesArr, section, stateColors) 
     inp.addEventListener('focus', () => setActive(section, idx));
     inp.addEventListener('click', () => setActive(section, idx));
     if (contrastEl) {
-      contrastEl.addEventListener('mouseenter', () => showContrastTooltip(contrastEl));
-      contrastEl.addEventListener('mouseleave', () => hideContrastTooltip());
+      const wrap = wrapsArr[idx];
+      const useWholeSwatch = section === 'theme' && wrap;
+      const hoverTarget = useWholeSwatch ? wrap : contrastEl;
+      hoverTarget.addEventListener('mouseenter', () =>
+        showContrastTooltip(contrastEl, undefined, useWholeSwatch ? wrap : undefined));
+      hoverTarget.addEventListener('mouseleave', () => hideContrastTooltip());
     }
   });
 }
@@ -288,11 +294,20 @@ function setActive(section, index) {
   if (hex) pickerSetHex(hex);
 }
 
-// ========= Contrast strip (B/W check/cross + tooltip) + preview =========
+// ========= Theme contrast: idle symbols (glow) + slide-up panel with B/W labels on wrap hover =========
 function updateContrast(hex, contrastEl) {
   if (!contrastEl) return;
+  const dash = '\u2014';
   if (!hex) {
-    contrastEl.innerHTML = '<span>B —</span><span>W —</span>';
+    contrastEl.innerHTML = `
+      <div class="swatch-contrast-idle">
+        <span class="swatch-contrast-sym swatch-contrast-sym--muted" aria-hidden="true">${dash}</span>
+        <span class="swatch-contrast-sym swatch-contrast-sym--muted" aria-hidden="true">${dash}</span>
+      </div>
+      <div class="swatch-contrast-hover">
+        <span class="swatch-contrast-line"><span class="swatch-contrast-lbl">B</span><span class="swatch-contrast-sym swatch-contrast-sym--muted">${dash}</span></span>
+        <span class="swatch-contrast-line"><span class="swatch-contrast-lbl">W</span><span class="swatch-contrast-sym swatch-contrast-sym--muted">${dash}</span></span>
+      </div>`;
     contrastEl.removeAttribute('data-tooltip');
     return;
   }
@@ -301,7 +316,17 @@ function updateContrast(hex, contrastEl) {
   const passB = rB >= 4.5, passW = rW >= 4.5;
   const symB = passB ? '\u2713' : '\u2717';
   const symW = passW ? '\u2713' : '\u2717';
-  contrastEl.innerHTML = `<span class="${passB ? 'pass' : 'fail'}">B ${symB}</span><span class="${passW ? 'pass' : 'fail'}">W ${symW}</span>`;
+  const clsB = passB ? 'pass' : 'fail';
+  const clsW = passW ? 'pass' : 'fail';
+  contrastEl.innerHTML = `
+      <div class="swatch-contrast-idle">
+        <span class="swatch-contrast-sym ${clsB}" aria-hidden="true">${symB}</span>
+        <span class="swatch-contrast-sym ${clsW}" aria-hidden="true">${symW}</span>
+      </div>
+      <div class="swatch-contrast-hover">
+        <span class="swatch-contrast-line"><span class="swatch-contrast-lbl">B</span><span class="swatch-contrast-sym ${clsB}">${symB}</span></span>
+        <span class="swatch-contrast-line"><span class="swatch-contrast-lbl">W</span><span class="swatch-contrast-sym ${clsW}">${symW}</span></span>
+      </div>`;
   const tooltip = `Black ${rB.toFixed(2)}:1 (${passB ? 'PASS' : 'FAIL'})\nWhite ${rW.toFixed(2)}:1 (${passW ? 'PASS' : 'FAIL'})`;
   contrastEl.dataset.tooltip = tooltip;
 }
