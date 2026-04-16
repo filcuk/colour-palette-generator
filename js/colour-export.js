@@ -87,6 +87,52 @@ export function structuralObjectFromResolved(arr) {
   return o;
 }
 
+/**
+ * Alternate property names seen in Power BI / Fabric theme JSON (vs classic
+ * `firstLevelElements` … names). Each row lists extra keys for the same index as {@link STRUCTURAL_KEYS}.
+ */
+export const STRUCTURAL_IMPORT_ALIAS_KEYS = [
+  ['foreground'],
+  ['foregroundNeutralSecondary'],
+  ['foregroundNeutralTertiary'],
+  ['backgroundNeutral'],
+  ['background'],
+  ['backgroundLight'],
+  ['tableAccent', 'accent']
+];
+
+/**
+ * Read structural colours from one or more theme JSON objects (root, nested `structural`, first `themes[]` entry, etc.).
+ * @param {Array<Record<string, unknown>|null|undefined>} sources
+ * @returns {{ merged: string[], any: boolean }}
+ */
+export function mergeStructuralColorsFromThemeJsonObjects(sources) {
+  const merged = DEFAULTS_STRUCTURAL.slice();
+  let any = false;
+  const list = (sources || []).filter(s => s && typeof s === 'object' && !Array.isArray(s));
+
+  for (let i = 0; i < STRUCTURAL_KEYS.length; i++) {
+    const keysToTry = [STRUCTURAL_KEYS[i], ...(STRUCTURAL_IMPORT_ALIAS_KEYS[i] || [])];
+    let found = null;
+    outer: for (const keyName of keysToTry) {
+      for (let j = 0; j < list.length; j++) {
+        const raw = list[j][keyName];
+        if (raw == null || raw === '') continue;
+        const h = toFullHex(raw);
+        if (h) {
+          found = h;
+          break outer;
+        }
+      }
+    }
+    if (found) {
+      merged[i] = found;
+      any = true;
+    }
+  }
+  return { merged, any };
+}
+
 export function buildThemeJsonPayloadFromState(s) {
   const nm = (s.name || '').trim();
   const dataColors = getThemeColorsFromState(s);

@@ -5,6 +5,7 @@ import {
   DEFAULTS_SENTIMENT,
   DEFAULTS_DIVERGENT,
   DEFAULTS_STRUCTURAL,
+  mergeStructuralColorsFromThemeJsonObjects,
   STRUCTURAL_KEYS
 } from './colour-export.js';
 import { toFullHex, sanitizeNameForFile } from './colour-math.js';
@@ -311,24 +312,40 @@ export function createImportExport(refs, getUi, themesApi) {
         } else {
           state.divergentEnabled = false;
         }
-        let anyStructural = false;
-        const mergedStructural = DEFAULTS_STRUCTURAL.slice();
-        for (let i = 0; i < STRUCTURAL_KEYS.length; i++) {
-          const k = STRUCTURAL_KEYS[i];
-          if (data[k] != null && data[k] !== '') {
-            const h = toFullHex(data[k]);
-            if (h) {
-              mergedStructural[i] = h;
-              anyStructural = true;
-            }
+        // Structural colours: classic keys, Fabric-style aliases (foreground…), and several nesting shapes.
+        const maybeObj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : null);
+        const structuralSources = [
+          maybeObj(data),
+          maybeObj(data && data.structural),
+          maybeObj(data && data.structuralColors),
+          maybeObj(data && data.theme),
+          maybeObj(data && data.theme && data.theme.structural),
+          maybeObj(data && data.theme && data.theme.structuralColors),
+          maybeObj(data && data.reportTheme),
+          maybeObj(data && data.reportTheme && data.reportTheme.structural),
+          maybeObj(data && data.reportTheme && data.reportTheme.structuralColors)
+        ];
+        if (Array.isArray(data.themes)) {
+          for (const t of data.themes) {
+            const th = maybeObj(t);
+            if (!th) continue;
+            structuralSources.push(
+              th,
+              maybeObj(th.structural),
+              maybeObj(th.structuralColors),
+              maybeObj(th.theme),
+              maybeObj(th.theme && th.theme.structural),
+              maybeObj(th.theme && th.theme.structuralColors),
+              maybeObj(th.reportTheme),
+              maybeObj(th.reportTheme && th.reportTheme.structural),
+              maybeObj(th.reportTheme && th.reportTheme.structuralColors)
+            );
           }
         }
-        if (anyStructural) {
-          state.structuralEnabled = true;
-          state.structuralColors = mergedStructural;
-        } else {
-          state.structuralEnabled = false;
-        }
+        const { merged: mergedStructural, any: anyStructural } =
+          mergeStructuralColorsFromThemeJsonObjects(structuralSources);
+        state.structuralEnabled = anyStructural;
+        if (anyStructural) state.structuralColors = mergedStructural;
         ui.updateOptionalSectionsVisibility();
         ui.renderSentimentSwatches();
         ui.renderDivergentSwatches();

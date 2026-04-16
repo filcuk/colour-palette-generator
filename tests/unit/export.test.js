@@ -7,6 +7,7 @@ import {
   DEFAULTS_SENTIMENT,
   DEFAULTS_DIVERGENT,
   DEFAULTS_STRUCTURAL,
+  mergeStructuralColorsFromThemeJsonObjects,
   STRUCTURAL_KEYS
 } from '../../js/colour-export.js';
 
@@ -85,6 +86,28 @@ describe('buildThemeJsonPayloadFromState', () => {
     expect(p.center).toBeDefined();
     expect(p.minimum).toBeDefined();
     expect(p).not.toHaveProperty('null');
+  });
+});
+
+describe('mergeStructuralColorsFromThemeJsonObjects', () => {
+  it('maps Fabric-style foreground / background* alias keys to structural slots', () => {
+    const fragment = {
+      foreground: '#F0F6FC',
+      foregroundNeutralSecondary: '#9198A1',
+      backgroundLight: '#9198A1',
+      foregroundNeutralTertiary: '#9198A1',
+      background: '#0E1117',
+      backgroundNeutral: '#373D45'
+    };
+    const { merged, any } = mergeStructuralColorsFromThemeJsonObjects([fragment]);
+    expect(any).toBe(true);
+    expect(merged[0]).toBe('#F0F6FC');
+    expect(merged[1]).toBe('#9198A1');
+    expect(merged[2]).toBe('#9198A1');
+    expect(merged[3]).toBe('#373D45');
+    expect(merged[4]).toBe('#0E1117');
+    expect(merged[5]).toBe('#9198A1');
+    expect(merged[6]).toBe(DEFAULTS_STRUCTURAL[6]);
   });
 });
 
