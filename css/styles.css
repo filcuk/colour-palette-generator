@@ -265,7 +265,9 @@ h1 {
   outline: 2px solid #c80000
 }
 
-/* Structural swatches: no contrast strip — symmetric padding, hex centred in the square. */
+/* Optional rows (no B/W contrast strip): symmetric padding, hex centred in the square. */
+.swatch-wrap[data-section="sentiment"] .swatch-input,
+.swatch-wrap[data-section="divergent"] .swatch-input,
 .swatch-wrap[data-section="structural"] .swatch-input {
   padding: 0 6px;
   display: flex;

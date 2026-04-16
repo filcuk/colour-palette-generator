@@ -169,12 +169,12 @@ function renderSentimentSwatches() {
   const labels = ['Good', 'Neutral', 'Bad'];
   for (let i = 0; i < 3; i++) {
     const val = toFullHex(state.sentimentColors[i]) || '';
-    html += swatchHTML('sentiment', i, val, labels[i], labels[i]);
+    html += swatchHTML('sentiment', i, val, labels[i], labels[i], false);
   }
   rowSentimentEl.innerHTML = html;
   sentimentWraps = Array.from(rowSentimentEl.querySelectorAll('.swatch-wrap'));
   sentimentInputs = sentimentWraps.map(w => w.querySelector('.swatch-input'));
-  sentimentBadgesWraps = sentimentWraps.map(w => w.querySelector('.swatch-contrast'));
+  sentimentBadgesWraps = sentimentWraps.map(() => null);
   bindSwatchInputs(sentimentWraps, sentimentInputs, sentimentBadgesWraps, 'sentiment', state.sentimentColors);
   updateActiveClass();
   updateSummary();
@@ -187,12 +187,12 @@ function renderDivergentSwatches() {
   const n = state.divergentNullEnabled !== false ? 4 : 3;
   for (let i = 0; i < n; i++) {
     const val = toFullHex(state.divergentColors[i]) || '';
-    html += swatchHTML('divergent', i, val, labels[i], labels[i]);
+    html += swatchHTML('divergent', i, val, labels[i], labels[i], false);
   }
   rowDivergentEl.innerHTML = html;
   divergentWraps = Array.from(rowDivergentEl.querySelectorAll('.swatch-wrap'));
   divergentInputs = divergentWraps.map(w => w.querySelector('.swatch-input'));
-  divergentBadgesWraps = divergentWraps.map(w => w.querySelector('.swatch-contrast'));
+  divergentBadgesWraps = divergentWraps.map(() => null);
   bindSwatchInputs(divergentWraps, divergentInputs, divergentBadgesWraps, 'divergent', state.divergentColors);
   updateActiveClass();
   updateSummary();
@@ -203,7 +203,7 @@ function renderStructuralSwatches() {
   let html = '';
   const labels = [
     'First Level',
-    'Second Sevel',
+    'Second Level',
     'Third Level',
     'Fourth Level',
     'Background',
@@ -353,11 +353,7 @@ function normalizeInput(input, contrastEl) {
 function updateSummary() {
   if (!summaryEl) return;
   let passB = 0, failB = 0, passW = 0, failW = 0;
-  const allInputs = [
-    ...(inputs || []),
-    ...(state.sentimentEnabled && sentimentInputs ? sentimentInputs : []),
-    ...(state.divergentEnabled && divergentInputs ? divergentInputs : [])
-  ];
+  const allInputs = [...(inputs || [])];
   allInputs.forEach(inp => {
     if (!inp) return;
     const hex = toFullHex(inp.value || '');
@@ -468,6 +464,12 @@ if (svgHideColourLabelsCb) {
 if (typeof normalizeBtn !== 'undefined' && normalizeBtn) {
   normalizeBtn.addEventListener('click', () => {
     inputs.forEach((inp, i) => { normalizeInput(inp, badgesWraps[i]); });
+    if (state.sentimentEnabled && sentimentInputs) {
+      sentimentInputs.forEach((inp, i) => { normalizeInput(inp, sentimentBadgesWraps[i]); });
+    }
+    if (state.divergentEnabled && divergentInputs) {
+      divergentInputs.forEach((inp, i) => { normalizeInput(inp, divergentBadgesWraps[i]); });
+    }
     if (state.structuralEnabled && structuralInputs) {
       structuralInputs.forEach((inp, i) => { normalizeInput(inp, structuralBadgesWraps[i]); });
     }
