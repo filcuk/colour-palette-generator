@@ -1,8 +1,12 @@
 import {
   buildExportSvgString,
   buildThemeJsonPayloadFromState,
+  DEFAULTS,
   DEFAULTS_SENTIMENT,
-  DEFAULTS_DIVERGENT
+  DEFAULTS_DIVERGENT,
+  DEFAULTS_STRUCTURAL,
+  mergeStructuralColorsFromThemeJsonObjects,
+  STRUCTURAL_KEYS
 } from './colour-export.js';
 import { toFullHex, sanitizeNameForFile } from './colour-math.js';
 import { clampThemeName } from './theme-name.js';
@@ -112,6 +116,14 @@ export function parseSvgPalette(text) {
               if (h) base[i] = h;
             }
             out.divergentColors = base;
+          }
+          if (meta.structural && typeof meta.structural === 'object') {
+            const merged = {};
+            for (const k of STRUCTURAL_KEYS) {
+              const h = toFullHex(meta.structural[k]);
+              if (h) merged[k] = h;
+            }
+            if (STRUCTURAL_KEYS.some(k => merged[k])) out.structural = merged;
           }
           return out;
         }
@@ -226,14 +238,21 @@ export function createImportExport(refs, getUi, themesApi) {
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      if (!data || !Array.isArray(data.dataColors) || !data.dataColors.length) {
-        alert('Invalid theme JSON: expected an object with a \'dataColors\' array.');
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        alert('Invalid theme JSON: expected a theme object.');
         return;
       }
-      const colors = data.dataColors.map(c => toFullHex(c)).filter(Boolean);
+      let colors = [];
+      if (Array.isArray(data.dataColors) && data.dataColors.length > 0) {
+        colors = data.dataColors.map(c => toFullHex(c)).filter(Boolean);
+      }
       if (!colors.length) {
-        alert('No valid hex colours found in dataColors.');
-        return;
+        colors = DEFAULTS.slice(0, 8).map(c => toFullHex(c)).filter(Boolean);
+        if (!colors.length) {
+          alert('Could not load default colours for import.');
+          return;
+        }
+        showToast('No theme colours in file; applied the default palette.', { theme: 'info' });
       }
       const importName =
         typeof data.name === 'string' ? clampThemeName(data.name) : '';
@@ -293,9 +312,44 @@ export function createImportExport(refs, getUi, themesApi) {
         } else {
           state.divergentEnabled = false;
         }
+        // Structural colours: classic keys, Fabric-style aliases (foreground…), and several nesting shapes.
+        const maybeObj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : null);
+        const structuralSources = [
+          maybeObj(data),
+          maybeObj(data && data.structural),
+          maybeObj(data && data.structuralColors),
+          maybeObj(data && data.theme),
+          maybeObj(data && data.theme && data.theme.structural),
+          maybeObj(data && data.theme && data.theme.structuralColors),
+          maybeObj(data && data.reportTheme),
+          maybeObj(data && data.reportTheme && data.reportTheme.structural),
+          maybeObj(data && data.reportTheme && data.reportTheme.structuralColors)
+        ];
+        if (Array.isArray(data.themes)) {
+          for (const t of data.themes) {
+            const th = maybeObj(t);
+            if (!th) continue;
+            structuralSources.push(
+              th,
+              maybeObj(th.structural),
+              maybeObj(th.structuralColors),
+              maybeObj(th.theme),
+              maybeObj(th.theme && th.theme.structural),
+              maybeObj(th.theme && th.theme.structuralColors),
+              maybeObj(th.reportTheme),
+              maybeObj(th.reportTheme && th.reportTheme.structural),
+              maybeObj(th.reportTheme && th.reportTheme.structuralColors)
+            );
+          }
+        }
+        const { merged: mergedStructural, any: anyStructural } =
+          mergeStructuralColorsFromThemeJsonObjects(structuralSources);
+        state.structuralEnabled = anyStructural;
+        if (anyStructural) state.structuralColors = mergedStructural;
         ui.updateOptionalSectionsVisibility();
         ui.renderSentimentSwatches();
         ui.renderDivergentSwatches();
+        ui.renderStructuralSwatches();
         saveState();
         replaceHashFromStateNow();
         updateThemeStatus();
@@ -373,8 +427,29 @@ export function createImportExport(refs, getUi, themesApi) {
           } else {
             state.divergentEnabled = false;
           }
+          if (parsed.structural && typeof parsed.structural === 'object') {
+            const next = DEFAULTS_STRUCTURAL.slice();
+            let any = false;
+            for (let i = 0; i < STRUCTURAL_KEYS.length; i++) {
+              const k = STRUCTURAL_KEYS[i];
+              const h = toFullHex(parsed.structural[k]);
+              if (h) {
+                next[i] = h;
+                any = true;
+              }
+            }
+            if (any) {
+              state.structuralEnabled = true;
+              state.structuralColors = next;
+            } else {
+              state.structuralEnabled = false;
+            }
+          } else {
+            state.structuralEnabled = false;
+          }
           ui.renderSentimentSwatches();
           ui.renderDivergentSwatches();
+          ui.renderStructuralSwatches();
           ui.updateOptionalSectionsVisibility();
           saveState();
           replaceHashFromStateNow();
@@ -426,6 +501,10 @@ export function createImportExport(refs, getUi, themesApi) {
   }
   if (svgCopyBtn) {
     svgCopyBtn.addEventListener('click', () => {
+      showToast(
+        'Browser security may prevent SVG from being copied to clipboard. If paste fails, use a download instead.',
+        { theme: 'warning', durationMs: 6500 }
+      );
       const svg = buildExportSvgString(buildExportSvgOptsFromState(false));
       const done = () => showCopyButtonFeedback(svgCopyBtn, true);
       const fail = () => showCopyButtonFeedback(svgCopyBtn, false);

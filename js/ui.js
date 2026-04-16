@@ -12,22 +12,35 @@ import {
 } from './colour-math.js';
 import { state, saveState, mergeStoredIntoState } from './state.js';
 
+/** One-line hints for Power BI structural colours (hover); see MS “Set structural colors”. */
+const STRUCTURAL_SWATCH_HELP = [
+  'Main text & icons on visuals',
+  'Secondary text & labels',
+  'Light borders / chrome',
+  'Dividers & muted detail',
+  'Report page background',
+  'Pane-style background areas',
+  'Table grids & accent lines'
+];
+
 /**
- * Swatches, contrast summary, count slider, optional rows, and colour picker.
+ * Swatches, count slider, optional rows, and colour picker.
  */
 export function initUi(refs, themesApi, ioApi) {
   const {
     rowEl,
     rowSentimentEl,
     rowDivergentEl,
+    rowStructuralEl,
     rowSentimentWrapEl,
     rowDivergentWrapEl,
+    rowStructuralWrapEl,
     sentimentEnabledCb,
     divergentEnabledCb,
+    structuralEnabledCb,
     divergentNullEnabledCb,
     countSlider,
     countValue,
-    summaryEl,
     themeNameEl,
     svgHideColourLabelsCb,
     contrastTooltipEl,
@@ -49,6 +62,7 @@ export function initUi(refs, themesApi, ioApi) {
 let wraps = [], inputs = [], badgesWraps = [];
 let sentimentWraps = [], sentimentInputs = [], sentimentBadgesWraps = [];
 let divergentWraps = [], divergentInputs = [], divergentBadgesWraps = [];
+let structuralWraps = [], structuralInputs = [], structuralBadgesWraps = [];
 let ph = 0, ps = 1, pv = 1; // picker HSV
 // ========= Rendering =========
 function escapeHtml(s) {
@@ -59,8 +73,11 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
-/** @param {string} [meaningLabel] — when set, shown above the swatch (Sentiment / Divergent). */
-function swatchHTML(section, i, value, ariaLabel, meaningLabel) {
+/**
+ * @param {string} [meaningLabel] — when set, shown above the swatch (Sentiment / Divergent).
+ * @param {boolean} [includeContrastStrip=true] — structural swatches omit B/W contrast UI.
+ */
+function swatchHTML(section, i, value, ariaLabel, meaningLabel, includeContrastStrip = true) {
   const vAttr = value ? ` value="${value}"` : '';
   const isActive = state.activeSection === section && state.activeIndex === i;
   const activeCls = isActive ? ' active' : '';
@@ -71,23 +88,37 @@ function swatchHTML(section, i, value, ariaLabel, meaningLabel) {
     meaningLabel != null && meaningLabel !== ''
       ? `<span class="swatch-meaning-label">${escapeHtml(meaningLabel)}</span>`
       : '';
+  const contrastHtml = includeContrastStrip
+    ? '<div class="swatch-contrast" aria-hidden="true" title=""></div>'
+    : '';
   return `
     <div class="swatch-wrap${activeCls}${optionalCls}" data-section="${section}" data-index="${i}">
       ${meaningSpan}
       <input class="swatch-input" aria-label="${labelEsc}" placeholder="#RRGGBB"${vAttr} data-section="${section}" data-index="${i}" />
-      <div class="swatch-contrast" aria-hidden="true" title=""></div>
+      ${contrastHtml}
     </div>
   `;
 }
 
-function showContrastTooltip(contrastEl) {
-  const text = contrastEl.dataset.tooltip;
-  if (!contrastTooltipEl || !text) return;
+/**
+ * @param {HTMLElement} anchorEl - source for `dataset.tooltip` when `textOverride` is omitted.
+ * @param {string} [textOverride] - if set, used instead of `anchorEl.dataset.tooltip`.
+ * @param {HTMLElement} [positionEl] - if set, tooltip is placed under this box (e.g. whole theme swatch).
+ */
+function showContrastTooltip(anchorEl, textOverride, positionEl) {
+  const text =
+    textOverride != null && textOverride !== ''
+      ? String(textOverride)
+      : anchorEl && anchorEl.dataset
+        ? anchorEl.dataset.tooltip
+        : '';
+  const posEl = positionEl || anchorEl;
+  if (!contrastTooltipEl || !text || !anchorEl || !posEl) return;
   contrastTooltipEl.textContent = text;
   contrastTooltipEl.classList.add('visible');
   contrastTooltipEl.setAttribute('aria-hidden', 'false');
   const offset = 8;
-  const rect = contrastEl.getBoundingClientRect();
+  const rect = posEl.getBoundingClientRect();
   const x = rect.left + rect.width / 2;
   const y = rect.bottom + offset;
   contrastTooltipEl.style.left = x + 'px';
@@ -111,8 +142,12 @@ function bindSwatchInputs(wrapsArr, inputsArr, badgesArr, section, stateColors) 
     inp.addEventListener('focus', () => setActive(section, idx));
     inp.addEventListener('click', () => setActive(section, idx));
     if (contrastEl) {
-      contrastEl.addEventListener('mouseenter', () => showContrastTooltip(contrastEl));
-      contrastEl.addEventListener('mouseleave', () => hideContrastTooltip());
+      const wrap = wrapsArr[idx];
+      const useWholeSwatch = section === 'theme' && wrap;
+      const hoverTarget = useWholeSwatch ? wrap : contrastEl;
+      hoverTarget.addEventListener('mouseenter', () =>
+        showContrastTooltip(contrastEl, undefined, useWholeSwatch ? wrap : undefined));
+      hoverTarget.addEventListener('mouseleave', () => hideContrastTooltip());
     }
   });
 }
@@ -130,7 +165,6 @@ function renderSwatches(n) {
   badgesWraps = wraps.map(w => w.querySelector('.swatch-contrast'));
   bindSwatchInputs(wraps, inputs, badgesWraps, 'theme', state.colors);
   updateActiveClass();
-  updateSummary();
 }
 
 function renderSentimentSwatches() {
@@ -139,15 +173,14 @@ function renderSentimentSwatches() {
   const labels = ['Good', 'Neutral', 'Bad'];
   for (let i = 0; i < 3; i++) {
     const val = toFullHex(state.sentimentColors[i]) || '';
-    html += swatchHTML('sentiment', i, val, labels[i], labels[i]);
+    html += swatchHTML('sentiment', i, val, labels[i], labels[i], false);
   }
   rowSentimentEl.innerHTML = html;
   sentimentWraps = Array.from(rowSentimentEl.querySelectorAll('.swatch-wrap'));
   sentimentInputs = sentimentWraps.map(w => w.querySelector('.swatch-input'));
-  sentimentBadgesWraps = sentimentWraps.map(w => w.querySelector('.swatch-contrast'));
+  sentimentBadgesWraps = sentimentWraps.map(() => null);
   bindSwatchInputs(sentimentWraps, sentimentInputs, sentimentBadgesWraps, 'sentiment', state.sentimentColors);
   updateActiveClass();
-  updateSummary();
 }
 
 function renderDivergentSwatches() {
@@ -157,38 +190,76 @@ function renderDivergentSwatches() {
   const n = state.divergentNullEnabled !== false ? 4 : 3;
   for (let i = 0; i < n; i++) {
     const val = toFullHex(state.divergentColors[i]) || '';
-    html += swatchHTML('divergent', i, val, labels[i], labels[i]);
+    html += swatchHTML('divergent', i, val, labels[i], labels[i], false);
   }
   rowDivergentEl.innerHTML = html;
   divergentWraps = Array.from(rowDivergentEl.querySelectorAll('.swatch-wrap'));
   divergentInputs = divergentWraps.map(w => w.querySelector('.swatch-input'));
-  divergentBadgesWraps = divergentWraps.map(w => w.querySelector('.swatch-contrast'));
+  divergentBadgesWraps = divergentWraps.map(() => null);
   bindSwatchInputs(divergentWraps, divergentInputs, divergentBadgesWraps, 'divergent', state.divergentColors);
   updateActiveClass();
-  updateSummary();
+}
+
+function renderStructuralSwatches() {
+  if (!rowStructuralEl) return;
+  let html = '';
+  const labels = [
+    'First Level',
+    'Second Level',
+    'Third Level',
+    'Fourth Level',
+    'Background',
+    'Secondary Background',
+    'Table Accent'
+  ];
+  for (let i = 0; i < 7; i++) {
+    const val = toFullHex(state.structuralColors[i]) || '';
+    html += swatchHTML('structural', i, val, labels[i], labels[i], false);
+  }
+  rowStructuralEl.innerHTML = html;
+  structuralWraps = Array.from(rowStructuralEl.querySelectorAll('.swatch-wrap'));
+  structuralInputs = structuralWraps.map(w => w.querySelector('.swatch-input'));
+  structuralBadgesWraps = structuralWraps.map(() => null);
+  bindSwatchInputs(structuralWraps, structuralInputs, structuralBadgesWraps, 'structural', state.structuralColors);
+  structuralWraps.forEach((wrap, i) => {
+    const inp = wrap.querySelector('.swatch-input');
+    const help = STRUCTURAL_SWATCH_HELP[i];
+    if (!inp || !help) return;
+    wrap.addEventListener('mouseenter', () => showContrastTooltip(inp, help));
+    wrap.addEventListener('mouseleave', hideContrastTooltip);
+  });
+  updateActiveClass();
 }
 
 function getActiveInput() {
   if (state.activeSection === 'theme') return inputs[state.activeIndex];
   if (state.activeSection === 'sentiment') return sentimentInputs ? sentimentInputs[state.activeIndex] : null;
   if (state.activeSection === 'divergent') return divergentInputs ? divergentInputs[state.activeIndex] : null;
+  if (state.activeSection === 'structural') return structuralInputs ? structuralInputs[state.activeIndex] : null;
   return null;
 }
 function getActiveBadgesWrap() {
   if (state.activeSection === 'theme') return badgesWraps[state.activeIndex];
   if (state.activeSection === 'sentiment') return sentimentBadgesWraps ? sentimentBadgesWraps[state.activeIndex] : null;
   if (state.activeSection === 'divergent') return divergentBadgesWraps ? divergentBadgesWraps[state.activeIndex] : null;
+  if (state.activeSection === 'structural') return structuralBadgesWraps ? structuralBadgesWraps[state.activeIndex] : null;
   return null;
 }
 function getActiveStateArray() {
   if (state.activeSection === 'theme') return state.colors;
   if (state.activeSection === 'sentiment') return state.sentimentColors;
   if (state.activeSection === 'divergent') return state.divergentColors;
+  if (state.activeSection === 'structural') return state.structuralColors;
   return state.colors;
 }
 
 function updateActiveClass() {
-  const allWraps = [...(wraps || []), ...(sentimentWraps || []), ...(divergentWraps || [])];
+  const allWraps = [
+    ...(wraps || []),
+    ...(sentimentWraps || []),
+    ...(divergentWraps || []),
+    ...(structuralWraps || [])
+  ];
   allWraps.forEach(w => {
     if (!w) return;
     const section = w.dataset.section;
@@ -205,7 +276,9 @@ function setActive(section, index) {
         ? state.divergentNullEnabled !== false
           ? 3
           : 2
-        : 2;
+        : section === 'structural'
+          ? 6
+          : 2;
   const i = Math.max(0, Math.min(maxIdx, index));
   state.activeSection = section;
   state.activeIndex = i;
@@ -216,11 +289,20 @@ function setActive(section, index) {
   if (hex) pickerSetHex(hex);
 }
 
-// ========= Contrast strip (B/W check/cross + tooltip) + preview =========
+// ========= Theme contrast: idle symbols (glow) + slide-up panel with B/W labels on wrap hover =========
 function updateContrast(hex, contrastEl) {
   if (!contrastEl) return;
+  const dash = '\u2014';
   if (!hex) {
-    contrastEl.innerHTML = '<span>B —</span><span>W —</span>';
+    contrastEl.innerHTML = `
+      <div class="swatch-contrast-idle">
+        <span class="swatch-contrast-sym swatch-contrast-sym--muted" aria-hidden="true">${dash}</span>
+        <span class="swatch-contrast-sym swatch-contrast-sym--muted" aria-hidden="true">${dash}</span>
+      </div>
+      <div class="swatch-contrast-hover">
+        <span class="swatch-contrast-line"><span class="swatch-contrast-lbl">B</span><span class="swatch-contrast-sym swatch-contrast-sym--muted">${dash}</span></span>
+        <span class="swatch-contrast-line"><span class="swatch-contrast-lbl">W</span><span class="swatch-contrast-sym swatch-contrast-sym--muted">${dash}</span></span>
+      </div>`;
     contrastEl.removeAttribute('data-tooltip');
     return;
   }
@@ -229,15 +311,32 @@ function updateContrast(hex, contrastEl) {
   const passB = rB >= 4.5, passW = rW >= 4.5;
   const symB = passB ? '\u2713' : '\u2717';
   const symW = passW ? '\u2713' : '\u2717';
-  contrastEl.innerHTML = `<span class="${passB ? 'pass' : 'fail'}">B ${symB}</span><span class="${passW ? 'pass' : 'fail'}">W ${symW}</span>`;
-  const tooltip = `Black ${rB.toFixed(2)}:1 (${passB ? 'PASS' : 'FAIL'})\nWhite ${rW.toFixed(2)}:1 (${passW ? 'PASS' : 'FAIL'})`;
+  const clsB = passB ? 'pass' : 'fail';
+  const clsW = passW ? 'pass' : 'fail';
+  contrastEl.innerHTML = `
+      <div class="swatch-contrast-idle">
+        <span class="swatch-contrast-sym ${clsB}" aria-hidden="true">${symB}</span>
+        <span class="swatch-contrast-sym ${clsW}" aria-hidden="true">${symW}</span>
+      </div>
+      <div class="swatch-contrast-hover">
+        <span class="swatch-contrast-line"><span class="swatch-contrast-lbl">B</span><span class="swatch-contrast-sym ${clsB}">${symB}</span></span>
+        <span class="swatch-contrast-line"><span class="swatch-contrast-lbl">W</span><span class="swatch-contrast-sym ${clsW}">${symW}</span></span>
+      </div>`;
+  const tooltip = `Contrast ≥ 4.5:1?\nBlack ${rB.toFixed(2)}:1 - ${passB ? 'pass' : 'fail'}\nWhite ${rW.toFixed(2)}:1 - ${passW ? 'pass' : 'fail'}`;
   contrastEl.dataset.tooltip = tooltip;
 }
 
 function applyPreview(input, contrastEl) {
   const section = input.dataset.section || 'theme';
   const idx = parseInt(input.dataset.index, 10) || 0;
-  const arr = section === 'theme' ? state.colors : section === 'sentiment' ? state.sentimentColors : state.divergentColors;
+  const arr =
+    section === 'theme'
+      ? state.colors
+      : section === 'sentiment'
+        ? state.sentimentColors
+        : section === 'divergent'
+          ? state.divergentColors
+          : state.structuralColors;
   const hex = toPreviewableHex(input.value || '');
 
   if (hex) {
@@ -258,7 +357,6 @@ function applyPreview(input, contrastEl) {
     input.style.color = '#111';
     updateContrast(null, contrastEl);
   }
-  updateSummary();
 }
 
 function normalizeInput(input, contrastEl) {
@@ -271,41 +369,17 @@ function normalizeInput(input, contrastEl) {
   }
 }
 
-function updateSummary() {
-  if (!summaryEl) return;
-  let passB = 0, failB = 0, passW = 0, failW = 0;
-  const allInputs = [
-    ...(inputs || []),
-    ...(state.sentimentEnabled && sentimentInputs ? sentimentInputs : []),
-    ...(state.divergentEnabled && divergentInputs ? divergentInputs : [])
-  ];
-  allInputs.forEach(inp => {
-    if (!inp) return;
-    const hex = toFullHex(inp.value || '');
-    if (!hex) return;
-    const rB = contrastRatio('#000000', hex);
-    const rW = contrastRatio('#FFFFFF', hex);
-    if (rB >= 4.5) passB++; else failB++;
-    if (rW >= 4.5) passW++; else failW++;
-  });
-  const totalB = passB + failB;
-  const totalW = passW + failW;
-  if (totalB === 0 && totalW === 0) summaryEl.textContent = 'Contrast summary: —';
-  else {
-    const pctB = totalB ? Math.round((passB / totalB) * 100) : 0;
-    const pctW = totalW ? Math.round((passW / totalW) * 100) : 0;
-    summaryEl.textContent = `Testing contrast ≥ 4.5:1 — Black ${pctB}% · White ${pctW}%.`;
-  }
-}
-
 function updateOptionalSectionsVisibility() {
   if (sentimentEnabledCb) sentimentEnabledCb.checked = !!state.sentimentEnabled;
   if (divergentEnabledCb) divergentEnabledCb.checked = !!state.divergentEnabled;
+  if (structuralEnabledCb) structuralEnabledCb.checked = !!state.structuralEnabled;
   if (divergentNullEnabledCb) divergentNullEnabledCb.checked = state.divergentNullEnabled !== false;
   if (rowSentimentWrapEl) rowSentimentWrapEl.classList.toggle('optional-hidden', !state.sentimentEnabled);
   if (rowDivergentWrapEl) rowDivergentWrapEl.classList.toggle('optional-hidden', !state.divergentEnabled);
+  if (rowStructuralWrapEl) rowStructuralWrapEl.classList.toggle('optional-hidden', !state.structuralEnabled);
   if (state.activeSection === 'sentiment' && !state.sentimentEnabled) setActive('theme', 0);
   if (state.activeSection === 'divergent' && !state.divergentEnabled) setActive('theme', 0);
+  if (state.activeSection === 'structural' && !state.structuralEnabled) setActive('theme', 0);
   if (state.activeSection === 'divergent' && state.divergentNullEnabled === false && state.activeIndex > 2) {
     setActive('divergent', 2);
   }
@@ -334,7 +408,6 @@ if (sentimentEnabledCb) {
   sentimentEnabledCb.addEventListener('change', () => {
     state.sentimentEnabled = sentimentEnabledCb.checked;
     updateOptionalSectionsVisibility();
-    updateSummary();
     saveState();
     ioApi.updateJsonPreview();
     ioApi.updateSvgPreview();
@@ -344,7 +417,15 @@ if (divergentEnabledCb) {
   divergentEnabledCb.addEventListener('change', () => {
     state.divergentEnabled = divergentEnabledCb.checked;
     updateOptionalSectionsVisibility();
-    updateSummary();
+    saveState();
+    ioApi.updateJsonPreview();
+    ioApi.updateSvgPreview();
+  });
+}
+if (structuralEnabledCb) {
+  structuralEnabledCb.addEventListener('change', () => {
+    state.structuralEnabled = structuralEnabledCb.checked;
+    updateOptionalSectionsVisibility();
     saveState();
     ioApi.updateJsonPreview();
     ioApi.updateSvgPreview();
@@ -358,7 +439,6 @@ if (divergentNullEnabledCb) {
     }
     renderDivergentSwatches();
     updateOptionalSectionsVisibility();
-    updateSummary();
     saveState();
     ioApi.updateJsonPreview();
     ioApi.updateSvgPreview();
@@ -376,6 +456,15 @@ if (svgHideColourLabelsCb) {
 if (typeof normalizeBtn !== 'undefined' && normalizeBtn) {
   normalizeBtn.addEventListener('click', () => {
     inputs.forEach((inp, i) => { normalizeInput(inp, badgesWraps[i]); });
+    if (state.sentimentEnabled && sentimentInputs) {
+      sentimentInputs.forEach((inp, i) => { normalizeInput(inp, sentimentBadgesWraps[i]); });
+    }
+    if (state.divergentEnabled && divergentInputs) {
+      divergentInputs.forEach((inp, i) => { normalizeInput(inp, divergentBadgesWraps[i]); });
+    }
+    if (state.structuralEnabled && structuralInputs) {
+      structuralInputs.forEach((inp, i) => { normalizeInput(inp, structuralBadgesWraps[i]); });
+    }
     saveState();
   });
 }
@@ -694,6 +783,7 @@ if (pickerShadesEl) {
     setCount(state.count);
     renderSentimentSwatches();
     renderDivergentSwatches();
+    renderStructuralSwatches();
     updateOptionalSectionsVisibility();
     setActive('theme', 0);
     themesApi.updateThemeStatus();
@@ -709,6 +799,7 @@ if (pickerShadesEl) {
     renderSwatches,
     renderSentimentSwatches,
     renderDivergentSwatches,
+    renderStructuralSwatches,
     updateOptionalSectionsVisibility,
     setActive,
     applyStoredState,

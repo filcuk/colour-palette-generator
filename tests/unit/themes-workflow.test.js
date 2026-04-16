@@ -1,7 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { toFullHex } from '../../js/colour-math.js';
-import { DEFAULTS, DEFAULTS_SENTIMENT, DEFAULTS_DIVERGENT } from '../../js/colour-export.js';
+import {
+  DEFAULTS,
+  DEFAULTS_SENTIMENT,
+  DEFAULTS_DIVERGENT,
+  DEFAULTS_STRUCTURAL
+} from '../../js/colour-export.js';
 
 /**
  * Fresh JSDOM + vi.resetModules() so each test gets a clean document (no leaked
@@ -106,6 +111,7 @@ async function createHarness(options = {}) {
       state.count = n;
     },
     renderSentimentSwatches() {},
+    renderStructuralSwatches() {},
     renderDivergentSwatches() {
       if (typeof onDivergentRender === 'function') onDivergentRender(state.divergentNullEnabled);
     },
@@ -278,6 +284,8 @@ describe('theme storage workflows', () => {
           divergentOrder: 'mcmn',
           sentimentEnabled: false,
           divergentEnabled: true,
+          structuralColors: DEFAULTS_STRUCTURAL.slice(),
+          structuralEnabled: false,
           divergentNullEnabled
         };
       }

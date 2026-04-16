@@ -10,7 +10,7 @@ A theme/colour palette generator, predominantly for use in [MS Power BI](https:/
 
 ## Features
 - **🧮 Variable colour count**: pick how many theme colours you need
-- **📊 Sentiment and divergent colours**: with gradient preview & export
+- **📊 Sentiment, divergent and structural colours**: with gradient preview & export
 - **⌨️ Flexible inputs**: including HEX, RGB, CYMK, colour picker, and predefined colour sets
 - **🔲 Contrast checks**: validation for black and white text at 4.5:1 or higher
 - **🎨 Theme management**: using browser local storage with automatic saving

@@ -7,7 +7,7 @@ import {
   resetStateData,
   state
 } from '../../js/state.js';
-import { DEFAULTS_DIVERGENT } from '../../js/colour-export.js';
+import { DEFAULTS_DIVERGENT, DEFAULTS_STRUCTURAL } from '../../js/colour-export.js';
 
 /** mcmn hex strings without #, length 6 */
 const MCMN_DV = DEFAULTS_DIVERGENT.map(c => c.replace(/^#/, '').toUpperCase());
@@ -90,5 +90,21 @@ describe('URL hash divergent colours', () => {
       divergentNullEnabled: false
     });
     expect(state.divergentNullEnabled).toBe(false);
+  });
+
+  it('round-trips structural colours when ste is set', () => {
+    const stc = DEFAULTS_STRUCTURAL.map(c => c.replace(/^#/, '').toUpperCase());
+    const p = {
+      n: 'x',
+      c: 8,
+      d: Array.from({ length: 16 }, (_, i) => '112233'),
+      ste: true,
+      stc
+    };
+    const s = hashPayloadToStoredShape(decodeHashPayload(encodeHashPayload(p)));
+    expect(s.structuralEnabled).toBe(true);
+    expect(s.structuralColors.map(c => c.toUpperCase())).toEqual(
+      DEFAULTS_STRUCTURAL.map(c => c.toUpperCase())
+    );
   });
 });

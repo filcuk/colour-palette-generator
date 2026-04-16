@@ -23,7 +23,7 @@ import { showToast } from './toasts.js';
 
 function toastFirstConfirm(which) {
   if (which === 'reset') {
-    showToast('Press again to confirm. All stored themes will be deleted.', { theme: 'critical' });
+    showToast('Press again to confirm. All stored themes will be permanently deleted.', { theme: 'critical' });
   } else {
     showToast('Press again to confirm. This action cannot be undone.', { theme: 'warning' });
   }
@@ -37,8 +37,11 @@ const refs = {
   rowDivergentEl: document.getElementById('rowDivergent'),
   rowSentimentWrapEl: document.getElementById('rowSentimentWrap'),
   rowDivergentWrapEl: document.getElementById('rowDivergentWrap'),
+  rowStructuralEl: document.getElementById('rowStructural'),
+  rowStructuralWrapEl: document.getElementById('rowStructuralWrap'),
   sentimentEnabledCb: document.getElementById('sentimentEnabled'),
   divergentEnabledCb: document.getElementById('divergentEnabled'),
+  structuralEnabledCb: document.getElementById('structuralEnabled'),
   divergentNullEnabledCb: document.getElementById('divergentNullEnabled'),
   countSlider: document.getElementById('countSlider'),
   countValue: document.getElementById('countValue'),
@@ -54,7 +57,6 @@ const refs = {
   jsonCopyBtn: document.getElementById('jsonCopyBtn'),
   exportJsonBtn: document.getElementById('exportJsonBtn'),
   importJsonBtn: document.getElementById('importJsonBtn'),
-  summaryEl: document.getElementById('summary'),
   themeNameEl: document.getElementById('themeName'),
   resetBtn: document.getElementById('resetBtn'),
   themeComboTrigger: document.getElementById('themeComboTrigger'),
@@ -96,6 +98,7 @@ function runResetAndReseed() {
   ui.setCount(state.count);
   ui.renderSentimentSwatches();
   ui.renderDivergentSwatches();
+  ui.renderStructuralSwatches();
   ui.updateOptionalSectionsVisibility();
   ui.setActive('theme', 0);
   themes.ensureInitialThemeIfEmpty();
@@ -149,6 +152,7 @@ savedThemes.push(...loadSavedThemes());
 ui.setCount(state.count);
 ui.renderSentimentSwatches();
 ui.renderDivergentSwatches();
+ui.renderStructuralSwatches();
 ui.updateOptionalSectionsVisibility();
 ui.setActive('theme', 0);
 const pickerSetSelect = document.getElementById('pickerSetSelect');

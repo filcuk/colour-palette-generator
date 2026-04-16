@@ -7,7 +7,13 @@ import {
   resolveThemeNameAgainstSavedList
 } from './theme-name.js';
 import { showToast } from './toasts.js';
-import { DEFAULTS, DEFAULTS_SENTIMENT, DEFAULTS_DIVERGENT } from './colour-export.js';
+import {
+  DEFAULTS,
+  DEFAULTS_SENTIMENT,
+  DEFAULTS_DIVERGENT,
+  DEFAULTS_STRUCTURAL,
+  getStructuralColorsResolved
+} from './colour-export.js';
 import {
   state,
   saveState,
@@ -171,6 +177,7 @@ export function createThemesController(refs, getUi, io, opts = {}) {
     }
     const sentiment = (state.sentimentColors || []).slice(0, 3).map(c => toFullHex(c)).filter(Boolean);
     const divergent = getDivergentColorsResolved();
+    const structural = getStructuralColorsResolved(state);
     return {
       name: cleanName,
       count: state.count,
@@ -180,6 +187,8 @@ export function createThemesController(refs, getUi, io, opts = {}) {
       divergentOrder: 'mcmn',
       sentimentEnabled: !!state.sentimentEnabled,
       divergentEnabled: !!state.divergentEnabled,
+      structuralColors: structural.slice(),
+      structuralEnabled: !!state.structuralEnabled,
       divergentNullEnabled: state.divergentNullEnabled !== false
     };
   }
@@ -296,9 +305,19 @@ export function createThemesController(refs, getUi, io, opts = {}) {
     }
     state.sentimentEnabled = theme.sentimentEnabled !== false;
     state.divergentEnabled = theme.divergentEnabled !== false;
+    state.structuralEnabled = theme.structuralEnabled === true;
     state.divergentNullEnabled = theme.divergentNullEnabled !== false;
+    const nextStructural = DEFAULTS_STRUCTURAL.slice();
+    if (Array.isArray(theme.structuralColors) && theme.structuralColors.length >= 7) {
+      for (let i = 0; i < 7; i++) {
+        const h = toFullHex(theme.structuralColors[i]);
+        if (h) nextStructural[i] = h;
+      }
+    }
+    state.structuralColors = nextStructural;
     ui.renderSentimentSwatches();
     ui.renderDivergentSwatches();
+    ui.renderStructuralSwatches();
     ui.updateOptionalSectionsVisibility();
     suppressAutoThemeSave = false;
     activeSavedThemeIndex = savedThemes.findIndex(t => t === theme);
@@ -330,6 +349,8 @@ export function createThemesController(refs, getUi, io, opts = {}) {
       divergentOrder: 'mcmn',
       sentimentEnabled: !!state.sentimentEnabled,
       divergentEnabled: !!state.divergentEnabled,
+      structuralColors: DEFAULTS_STRUCTURAL.slice(),
+      structuralEnabled: false,
       divergentNullEnabled: true
     };
     savedThemes.push(payload);

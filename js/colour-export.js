@@ -3,13 +3,29 @@
  * Keep behaviour aligned with the app UI.
  */
 export const DEFAULTS = [
-  '#FF6B6B', '#F7C948', '#4ECDC4', '#556CD6', '#2E3A59', '#1B998B', '#E76F51', '#264653',
-  '#8E44AD', '#27AE60', '#D35400', '#3498DB', '#E84393', '#16A085', '#C0392B', '#7F8C8D'
+  // First 8: user-provided theme defaults
+  '#E74C3C', '#A061BA', '#2980B9', '#16A085', '#F1C40F', '#E67E22', '#927064', '#607D8B',
+  // Last 8: hue-complementary (HSV hue rotated by 180°), generated from the first 8 above
+  '#3CD7E7', '#7BBA61', '#B96229', '#A01631', '#0F3CF1', '#228AE6', '#648692', '#8B6E60'
 ];
 /** State order + JSON keys: good, neutral, bad */
 export const DEFAULTS_SENTIMENT = ['#E53935', '#757575', '#43A047'];
 /** State order + JSON keys: maximum, center, minimum, "null" */
 export const DEFAULTS_DIVERGENT = ['#B2182B', '#F7F7F7', '#2166AC', '#757575'];
+
+/** Power BI theme keys, same order as {@link DEFAULTS_STRUCTURAL}. */
+export const STRUCTURAL_KEYS = [
+  'firstLevelElements',
+  'secondLevelElements',
+  'thirdLevelElements',
+  'fourthLevelElements',
+  'background',
+  'secondaryBackground',
+  'tableAccent'
+];
+export const DEFAULTS_STRUCTURAL = [
+  '#252423', '#605E5C', '#F3F2F1', '#B3B0AD', '#FFFFFF', '#C8C6C4', '#118DFF'
+];
 
 const clampHex = s => s.replace(/[^0-9a-f]/gi, '').slice(0, 6).toUpperCase();
 function toFullHex(raw) {
@@ -56,6 +72,66 @@ function getDivergentColorsResolved(s) {
   return (s.divergentColors || DEFAULTS_DIVERGENT).slice(0, 4).map((c, i) =>
     toFullHex(c) || toFullHex(DEFAULTS_DIVERGENT[i]) || '#000000');
 }
+export function getStructuralColorsResolved(s) {
+  return STRUCTURAL_KEYS.map((_, i) =>
+    toFullHex((s.structuralColors || DEFAULTS_STRUCTURAL)[i]) ||
+    toFullHex(DEFAULTS_STRUCTURAL[i]) ||
+    '#000000');
+}
+/** Plain object keyed like Power BI theme JSON (for SVG metadata). */
+export function structuralObjectFromResolved(arr) {
+  const o = {};
+  STRUCTURAL_KEYS.forEach((k, i) => {
+    o[k] = arr[i];
+  });
+  return o;
+}
+
+/**
+ * Alternate property names seen in Power BI / Fabric theme JSON (vs classic
+ * `firstLevelElements` … names). Each row lists extra keys for the same index as {@link STRUCTURAL_KEYS}.
+ */
+export const STRUCTURAL_IMPORT_ALIAS_KEYS = [
+  ['foreground'],
+  ['foregroundNeutralSecondary'],
+  ['foregroundNeutralTertiary'],
+  ['backgroundNeutral'],
+  ['background'],
+  ['backgroundLight'],
+  ['tableAccent', 'accent']
+];
+
+/**
+ * Read structural colours from one or more theme JSON objects (root, nested `structural`, first `themes[]` entry, etc.).
+ * @param {Array<Record<string, unknown>|null|undefined>} sources
+ * @returns {{ merged: string[], any: boolean }}
+ */
+export function mergeStructuralColorsFromThemeJsonObjects(sources) {
+  const merged = DEFAULTS_STRUCTURAL.slice();
+  let any = false;
+  const list = (sources || []).filter(s => s && typeof s === 'object' && !Array.isArray(s));
+
+  for (let i = 0; i < STRUCTURAL_KEYS.length; i++) {
+    const keysToTry = [STRUCTURAL_KEYS[i], ...(STRUCTURAL_IMPORT_ALIAS_KEYS[i] || [])];
+    let found = null;
+    outer: for (const keyName of keysToTry) {
+      for (let j = 0; j < list.length; j++) {
+        const raw = list[j][keyName];
+        if (raw == null || raw === '') continue;
+        const h = toFullHex(raw);
+        if (h) {
+          found = h;
+          break outer;
+        }
+      }
+    }
+    if (found) {
+      merged[i] = found;
+      any = true;
+    }
+  }
+  return { merged, any };
+}
 
 export function buildThemeJsonPayloadFromState(s) {
   const nm = (s.name || '').trim();
@@ -74,6 +150,12 @@ export function buildThemeJsonPayloadFromState(s) {
     payload.minimum = divergent[2];
     if (s.divergentNullEnabled !== false) payload['null'] = divergent[3];
   }
+  if (s.structuralEnabled) {
+    const structural = getStructuralColorsResolved(s);
+    STRUCTURAL_KEYS.forEach((k, i) => {
+      payload[k] = structural[i];
+    });
+  }
   return payload;
 }
 
@@ -85,6 +167,8 @@ export function buildExportSvgString(opts) {
     themeName,
     sentimentEnabled,
     divergentEnabled,
+    structuralEnabled = false,
+    structural = null,
     hideColourLabels = false,
     forPreview = false
   } = opts;
@@ -179,19 +263,21 @@ export function buildExportSvgString(opts) {
     }
   }
 
+  const hasStructuralMeta = structuralEnabled && structural && typeof structural === 'object';
   const meta = {
     app: 'colour-palette',
-    version: 7,
+    version: 8,
     name: (themeName || '').trim(),
     count,
     colors: themeColors,
     ...(sentimentEnabled && sentiment.length === 3 ? { sentimentColors: sentiment } : {}),
-    ...(divergentEnabled && divergent.length >= 3 ? { divergentColors: divergent } : {})
+    ...(divergentEnabled && divergent.length >= 3 ? { divergentColors: divergent } : {}),
+    ...(hasStructuralMeta ? { structural } : {})
   };
   const svgStyle = forPreview ? ' style="max-width:100%;height:auto"' : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${safeTitle}"${svgStyle}>
   <title>${safeTitle}</title>
-  <desc>Theme: ${safeTitle}. Palette exported with ${count} theme swatch(es)${hasSentiment ? ', sentiment row' : ''}${hasDivergent ? ', divergent row' : ''}. Metadata included for re-import.</desc>
+  <desc>Theme: ${safeTitle}. Palette exported with ${count} theme swatch(es)${hasSentiment ? ', sentiment row' : ''}${hasDivergent ? ', divergent row' : ''}${hasStructuralMeta ? ', structural colours in metadata only' : ''}. Metadata included for re-import.</desc>
   <metadata id="palette-meta">${JSON.stringify(meta)}</metadata>
   ${nodes}
 </svg>`;
