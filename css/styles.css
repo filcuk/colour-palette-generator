@@ -220,6 +220,12 @@ hr.colours-picker-divider {
   align-items: center;
   gap: 6px;
   position: relative;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.swatch-wrap:hover,
+.swatch-wrap:focus-within {
+  transform: translateY(-5px);
 }
 
 .swatch-wrap--labeled {
@@ -256,7 +262,7 @@ hr.colours-picker-divider {
   color: var(--ink);
   background: #fff;
   outline: none;
-  transition: transform .08s, box-shadow .12s, background .1s;
+  transition: box-shadow .12s, background .1s;
   caret-color: currentColor;
   padding: 4px 4px 18px 4px;
   box-sizing: border-box;
@@ -264,9 +270,6 @@ hr.colours-picker-divider {
 
 .swatch-input:focus {
   box-shadow: 0 6px 22px rgba(0, 0, 0, .10);
-}
-.swatch-input:focus:not([data-section="theme"]) {
-  transform: translateY(-1px);
 }
 
 .swatch-input.invalid {
@@ -402,6 +405,13 @@ hr.colours-picker-divider {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .swatch-wrap {
+    transition: none;
+  }
+  .swatch-wrap:hover,
+  .swatch-wrap:focus-within {
+    transform: none;
+  }
   .swatch-wrap[data-section="theme"] .swatch-contrast-hover,
   .swatch-wrap[data-section="theme"] .swatch-contrast-idle,
   .swatch-wrap[data-section="theme"] .swatch-input {
