@@ -1046,6 +1046,43 @@ input[type="file"] {
   }
 }
 
+/* —— Delete / Reset: dim page while waiting for second click —— */
+.danger-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(14, 17, 23, 0.52);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+  pointer-events: none;
+}
+
+.danger-confirm-backdrop.danger-confirm-backdrop--visible {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+button.danger-confirm-target {
+  position: relative;
+  z-index: 9500;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.9),
+    0 0 0 4px rgba(0, 0, 0, 0.12),
+    0 10px 32px rgba(0, 0, 0, 0.28);
+}
+
+body.danger-confirm-pending {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .danger-confirm-backdrop {
+    transition: none;
+  }
+}
+
 /* —— Toasts (transient top-right messages) —— */
 .toast-host {
   position: fixed;

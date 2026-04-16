@@ -23,7 +23,7 @@ import { showToast } from './toasts.js';
 
 function toastFirstConfirm(which) {
   if (which === 'reset') {
-    showToast('Press again to confirm. All stored themes will be deleted.', { theme: 'critical' });
+    showToast('Press again to confirm. All stored themes will be permanently deleted.', { theme: 'critical' });
   } else {
     showToast('Press again to confirm. This action cannot be undone.', { theme: 'warning' });
   }
