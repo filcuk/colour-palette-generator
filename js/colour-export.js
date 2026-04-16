@@ -3,8 +3,10 @@
  * Keep behaviour aligned with the app UI.
  */
 export const DEFAULTS = [
-  '#FF6B6B', '#F7C948', '#4ECDC4', '#556CD6', '#2E3A59', '#1B998B', '#E76F51', '#264653',
-  '#8E44AD', '#27AE60', '#D35400', '#3498DB', '#E84393', '#16A085', '#C0392B', '#7F8C8D'
+  // First 8: user-provided theme defaults
+  '#E74C3C', '#A061BA', '#2980B9', '#16A085', '#F1C40F', '#E67E22', '#927064', '#607D8B',
+  // Last 8: hue-complementary (HSV hue rotated by 180°), generated from the first 8 above
+  '#3CD7E7', '#7BBA61', '#B96229', '#A01631', '#0F3CF1', '#228AE6', '#648692', '#8B6E60'
 ];
 /** State order + JSON keys: good, neutral, bad */
 export const DEFAULTS_SENTIMENT = ['#E53935', '#757575', '#43A047'];

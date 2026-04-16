@@ -1,6 +1,7 @@
 import {
   buildExportSvgString,
   buildThemeJsonPayloadFromState,
+  DEFAULTS,
   DEFAULTS_SENTIMENT,
   DEFAULTS_DIVERGENT,
   DEFAULTS_STRUCTURAL,
@@ -236,14 +237,21 @@ export function createImportExport(refs, getUi, themesApi) {
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      if (!data || !Array.isArray(data.dataColors) || !data.dataColors.length) {
-        alert('Invalid theme JSON: expected an object with a \'dataColors\' array.');
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        alert('Invalid theme JSON: expected a theme object.');
         return;
       }
-      const colors = data.dataColors.map(c => toFullHex(c)).filter(Boolean);
+      let colors = [];
+      if (Array.isArray(data.dataColors) && data.dataColors.length > 0) {
+        colors = data.dataColors.map(c => toFullHex(c)).filter(Boolean);
+      }
       if (!colors.length) {
-        alert('No valid hex colours found in dataColors.');
-        return;
+        colors = DEFAULTS.slice(0, 8).map(c => toFullHex(c)).filter(Boolean);
+        if (!colors.length) {
+          alert('Could not load default colours for import.');
+          return;
+        }
+        showToast('No theme colours in file; applied the default palette.', { theme: 'info' });
       }
       const importName =
         typeof data.name === 'string' ? clampThemeName(data.name) : '';
@@ -477,7 +485,7 @@ export function createImportExport(refs, getUi, themesApi) {
   if (svgCopyBtn) {
     svgCopyBtn.addEventListener('click', () => {
       showToast(
-        'Browser security settings may stop SVG from pasting correctly after copy. If paste fails, use Download instead.',
+        'Browser security may prevent SVG from being copied to clipboard. If paste fails, use a download instead.',
         { theme: 'warning', durationMs: 6500 }
       );
       const svg = buildExportSvgString(buildExportSvgOptsFromState(false));
