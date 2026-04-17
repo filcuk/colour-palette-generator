@@ -14,7 +14,7 @@
   <div id="toastHost" class="toast-host" aria-live="polite" aria-relevant="additions"></div>
   <div id="dangerConfirmBackdrop" class="danger-confirm-backdrop" aria-hidden="true"></div>
   <div id="contrastTooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
-  
+
   <div class="app-layout" id="appLayout">
     <div class="app-layout-main" id="appLayoutMain">
       <h1><img src="res/logo.svg" width="32"> Power BI Theme Customiser</h1>
@@ -226,9 +226,92 @@
     <div class="app-layout-preview" id="appLayoutPreview">
       <aside id="coloursPreviewPanel" class="colours-preview-panel" aria-labelledby="colours-preview-heading"
         aria-hidden="true">
-        <h3 id="colours-preview-heading" class="colours-preview-panel-title">Preview</h3>
+        <h3 id="colours-preview-heading" class="colours-preview-panel-title">Report preview</h3>
         <div class="colours-preview-panel-body">
-          <p class="colours-preview-placeholder">Theme preview will appear here.</p>
+          <div class="pbi-report-preview" id="pbiReportPreview" aria-label="Simulated Power BI report using current theme colours">
+            <div class="pbi-report">
+              <nav class="pbi-nav" aria-label="Filters">
+                <div class="pbi-nav-title">Filters</div>
+                <div class="pbi-slicer">
+                  <span class="pbi-slicer-label">Date</span>
+                  <div class="pbi-slicer-box">Jan 2024 – Mar 2026</div>
+                </div>
+                <div class="pbi-slicer">
+                  <span class="pbi-slicer-label">Region</span>
+                  <div class="pbi-slicer-box">All</div>
+                </div>
+                <div class="pbi-slicer">
+                  <span class="pbi-slicer-label">Category</span>
+                  <div class="pbi-slicer-box">Electronics, Home</div>
+                </div>
+              </nav>
+              <div class="pbi-main">
+                <header class="pbi-title">Sales performance</header>
+                <div class="pbi-cards" role="list">
+                  <div class="pbi-card" role="listitem">
+                    <span class="pbi-card-label">Sales</span>
+                    <span class="pbi-card-value">$1.2M</span>
+                    <span class="pbi-card-delta pbi-card-delta--up">▲ 4.2%</span>
+                  </div>
+                  <div class="pbi-card" role="listitem">
+                    <span class="pbi-card-label">Revenue</span>
+                    <span class="pbi-card-value">$892K</span>
+                    <span class="pbi-card-delta pbi-card-delta--up">▲ 1.8%</span>
+                  </div>
+                  <div class="pbi-card" role="listitem">
+                    <span class="pbi-card-label">Volume</span>
+                    <span class="pbi-card-value">48.3K</span>
+                    <span class="pbi-card-delta pbi-card-delta--down">▼ 0.6%</span>
+                  </div>
+                  <div class="pbi-card" role="listitem">
+                    <span class="pbi-card-label">Products</span>
+                    <span class="pbi-card-value">312</span>
+                    <span class="pbi-card-delta pbi-card-delta--up">▲ 12</span>
+                  </div>
+                </div>
+                <div class="pbi-bar-chart pbi-visual" aria-hidden="true">
+                  <div class="pbi-visual-title">Sales by month</div>
+                  <div class="pbi-bar-area">
+                    <div class="pbi-bar" style="--h: 42%; --bc: var(--pbi-c0);"></div>
+                    <div class="pbi-bar" style="--h: 68%; --bc: var(--pbi-c1);"></div>
+                    <div class="pbi-bar" style="--h: 55%; --bc: var(--pbi-c2);"></div>
+                    <div class="pbi-bar" style="--h: 88%; --bc: var(--pbi-c3);"></div>
+                    <div class="pbi-bar" style="--h: 61%; --bc: var(--pbi-c4);"></div>
+                    <div class="pbi-bar" style="--h: 74%; --bc: var(--pbi-c5);"></div>
+                  </div>
+                </div>
+                <div class="pbi-pie-chart pbi-visual" aria-hidden="true">
+                  <div class="pbi-visual-title">Share by segment</div>
+                  <div class="pbi-pie"></div>
+                </div>
+                <div class="pbi-line-chart pbi-visual" aria-hidden="true">
+                  <div class="pbi-visual-title">Trend</div>
+                  <svg class="pbi-line-svg" viewBox="0 0 200 80" preserveAspectRatio="none">
+                    <polygon class="pbi-line-fill" points="0,80 0,55 40,48 80,62 120,28 160,40 200,20 200,80" />
+                    <polyline class="pbi-line-stroke" points="0,55 40,48 80,62 120,28 160,40 200,20" fill="none" />
+                  </svg>
+                </div>
+                <div class="pbi-table-wrap pbi-visual">
+                  <div class="pbi-visual-title">Top products</div>
+                  <table class="pbi-table">
+                    <thead>
+                      <tr>
+                        <th>Product</th>
+                        <th class="pbi-num">Qty</th>
+                        <th class="pbi-num">Sales</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr><td>Alpha</td><td class="pbi-num">120</td><td class="pbi-num">$42K</td></tr>
+                      <tr><td>Bravo</td><td class="pbi-num">98</td><td class="pbi-num">$31K</td></tr>
+                      <tr><td>Charlie</td><td class="pbi-num">76</td><td class="pbi-num">$28K</td></tr>
+                      <tr><td>Delta</td><td class="pbi-num">54</td><td class="pbi-num">$19K</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </aside>
     </div>

@@ -184,6 +184,249 @@ h1 {
   color: #666;
 }
 
+/* —— Simulated Power BI report (theme colours via --pbi-* on #pbiReportPreview) —— */
+.pbi-report-preview {
+  --pbi-page-bg: #f3f2f1;
+  --pbi-card-bg: #ffffff;
+  --pbi-fg: #252423;
+  --pbi-fg-secondary: #605e5c;
+  --pbi-fg-muted: #a19f9d;
+  --pbi-border: #edebe9;
+  --pbi-accent: #118dff;
+  --pbi-c0: #118dff;
+  --pbi-c1: #c43e1c;
+  --pbi-c2: #038387;
+  --pbi-c3: #8764b8;
+  --pbi-c4: #e66c37;
+  font: 12px/1.35 system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  color: var(--pbi-fg);
+  border-radius: 8px;
+  overflow: auto;
+  max-height: min(72vh, 760px);
+}
+
+.pbi-report {
+  display: grid;
+  grid-template-columns: minmax(128px, 24%) 1fr;
+  min-height: 400px;
+  background: var(--pbi-page-bg);
+  border: 1px solid var(--pbi-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.pbi-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 10px 12px;
+  background: color-mix(in srgb, var(--pbi-card-bg) 92%, var(--pbi-page-bg));
+  border-right: 1px solid var(--pbi-border);
+}
+
+.pbi-nav-title {
+  font: 600 11px/1.2 system-ui, sans-serif;
+  color: var(--pbi-fg-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pbi-slicer-label {
+  display: block;
+  font-size: 10px;
+  color: var(--pbi-fg-muted);
+  margin-bottom: 3px;
+}
+
+.pbi-slicer-box {
+  padding: 6px 8px;
+  font-size: 11px;
+  color: var(--pbi-fg);
+  background: var(--pbi-card-bg);
+  border: 1px solid var(--pbi-border);
+  border-radius: 4px;
+  border-left: 3px solid var(--pbi-accent);
+}
+
+.pbi-main {
+  display: grid;
+  grid-template-columns: 1fr minmax(108px, 32%);
+  grid-template-rows: auto auto minmax(120px, 1fr) minmax(120px, 1fr);
+  gap: 8px 10px;
+  padding: 10px 10px 12px;
+  align-content: start;
+}
+
+.pbi-title {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--pbi-fg);
+}
+
+.pbi-cards {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pbi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 10px;
+  background: var(--pbi-card-bg);
+  border: 1px solid var(--pbi-border);
+  border-radius: 6px;
+  border-top: 3px solid var(--pbi-accent);
+}
+
+.pbi-card-label {
+  font-size: 10px;
+  color: var(--pbi-fg-secondary);
+}
+
+.pbi-card-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--pbi-fg);
+}
+
+.pbi-card-delta {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.pbi-card-delta--up {
+  color: var(--pbi-c2);
+}
+
+.pbi-card-delta--down {
+  color: var(--pbi-c0);
+}
+
+.pbi-visual {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  padding: 8px;
+  background: var(--pbi-card-bg);
+  border: 1px solid var(--pbi-border);
+  border-radius: 6px;
+}
+
+.pbi-visual-title {
+  font: 600 10px/1.2 system-ui, sans-serif;
+  color: var(--pbi-fg-secondary);
+}
+
+.pbi-bar-chart {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.pbi-bar-area {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 6px;
+  min-height: 100px;
+  padding: 4px 2px 0;
+  border-bottom: 1px solid var(--pbi-border);
+}
+
+.pbi-bar {
+  flex: 1;
+  max-width: 28px;
+  height: var(--h, 50%);
+  background: var(--bc, var(--pbi-accent));
+  border-radius: 3px 3px 0 0;
+}
+
+.pbi-pie-chart {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.pbi-pie {
+  flex: 1;
+  width: 100%;
+  max-width: 120px;
+  aspect-ratio: 1;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--pbi-c0) 0turn 0.33turn,
+    var(--pbi-c1) 0.33turn 0.52turn,
+    var(--pbi-c2) 0.52turn 0.72turn,
+    var(--pbi-c3) 0.72turn 0.88turn,
+    var(--pbi-c4) 0.88turn 1turn
+  );
+}
+
+.pbi-line-chart {
+  grid-column: 1;
+  grid-row: 4;
+}
+
+.pbi-line-svg {
+  width: 100%;
+  height: auto;
+  min-height: 72px;
+  display: block;
+}
+
+.pbi-line-fill {
+  fill: var(--pbi-accent);
+  opacity: 0.2;
+}
+
+.pbi-line-stroke {
+  stroke: var(--pbi-accent);
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.pbi-table-wrap {
+  grid-column: 2;
+  grid-row: 4;
+  align-self: end;
+}
+
+.pbi-table {
+  width: 100%;
+  font-size: 10px;
+  border-collapse: collapse;
+  color: var(--pbi-fg);
+}
+
+.pbi-table th,
+.pbi-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--pbi-border);
+  text-align: left;
+}
+
+.pbi-table th {
+  font-weight: 600;
+  color: var(--pbi-fg);
+  background: color-mix(in srgb, var(--pbi-page-bg) 55%, var(--pbi-card-bg));
+}
+
+.pbi-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--pbi-page-bg) 35%, var(--pbi-card-bg));
+}
+
+.pbi-table .pbi-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 1079px) {
   .app-layout-preview {
     width: 100%;

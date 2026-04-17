@@ -3,15 +3,24 @@ import { test, expect } from '@playwright/test';
 test.describe('Colour Palette Generator', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(/Power BI Theme Customiser/i);
+    const main = page.locator('#appLayoutMain');
+    await expect(main.getByRole('heading', { level: 1 })).toContainText(/Power BI Theme Customiser/i);
   });
 
   test('loads and shows the main heading', async ({ page }) => {
     await expect(page).toHaveTitle(/Power BI Theme Customiser/i);
   });
 
+  test('heading and features guide sit in the layout main column', async ({ page }) => {
+    const main = page.locator('#appLayoutMain');
+    await expect(main.locator('h1')).toBeVisible();
+    await expect(main.locator('#featuresGuide')).toBeVisible();
+    await expect(page.locator('body > h1')).toHaveCount(0);
+    await expect(page.locator('body > #featuresGuide')).toHaveCount(0);
+  });
+
   test('theme name field is visible', async ({ page }) => {
-    await expect(page.getByPlaceholder(/My theme or pick saved/i)).toBeVisible();
+    await expect(page.locator('#appLayoutMain').getByPlaceholder(/My theme or pick saved/i)).toBeVisible();
   });
 
   test.describe('Themes', () => {

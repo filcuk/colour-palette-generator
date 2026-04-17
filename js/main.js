@@ -7,7 +7,8 @@ import {
   updateHashFromState,
   replaceHashFromStateNow,
   enableHashHistoryPush,
-  resetStateData
+  resetStateData,
+  onAfterSaveState
 } from './state.js';
 import {
   savedThemes,
@@ -21,6 +22,7 @@ import { clampThemeName } from './theme-name.js';
 import { createTwiceConfirmPair } from './twice-confirm.js';
 import { showToast } from './toasts.js';
 import { initColoursPreviewLayout } from './colours-preview-layout.js';
+import { initPbiReportPreview, refreshPbiReportPreview } from './pbi-report-preview.js';
 
 function toastFirstConfirm(which) {
   if (which === 'reset') {
@@ -131,9 +133,12 @@ initColoursPreviewLayout({
   panelEl: document.getElementById('coloursPreviewPanel')
 });
 
+const pbiReportPreviewEl = document.getElementById('pbiReportPreview');
 const fromHash = readStateFromHash();
 const stored = fromHash || loadState();
 if (stored) ui.applyStoredState(stored);
+initPbiReportPreview(pbiReportPreviewEl);
+onAfterSaveState(() => refreshPbiReportPreview(pbiReportPreviewEl));
 
 let urlNavRaf = null;
 function scheduleApplyStateFromUrl() {

@@ -74,6 +74,13 @@ export function setAfterSaveStateHook(fn) {
   afterSaveStateHook = typeof fn === 'function' ? fn : () => {};
 }
 
+const afterSaveStateListeners = new Set();
+/** Run after each successful {@link saveState} (hash update optional). Does not replace {@link setAfterSaveStateHook}. */
+export function onAfterSaveState(fn) {
+  if (typeof fn === 'function') afterSaveStateListeners.add(fn);
+  return () => afterSaveStateListeners.delete(fn);
+}
+
 /**
  * @param {{ skipHashUpdate?: boolean }} [options] - Set skipHashUpdate to persist only (e.g. after re-syncing URL from memory).
  */
@@ -101,6 +108,13 @@ export function saveState(options = {}) {
   } catch { }
   if (!skipHashUpdate) updateHashFromState();
   afterSaveStateHook();
+  for (const fn of afterSaveStateListeners) {
+    try {
+      fn();
+    } catch {
+      /* ignore listener errors */
+    }
+  }
 }
 
 export function loadState() {
