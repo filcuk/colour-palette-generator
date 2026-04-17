@@ -32,6 +32,19 @@ export function refreshPbiReportPreview(root) {
   for (let i = 0; i < 16; i++) {
     root.style.setProperty(`--pbi-c${i}`, theme[i % n] || '#118DFF');
   }
+
+  const barArea = root.querySelector('#pbiBarArea');
+  if (barArea) {
+    barArea.replaceChildren();
+    for (let i = 0; i < n; i++) {
+      const bar = document.createElement('div');
+      bar.className = 'pbi-bar';
+      const hPct = 36 + ((i * 41 + n * 13) % 50);
+      bar.style.setProperty('--h', `${hPct}%`);
+      bar.style.setProperty('--bc', `var(--pbi-c${i})`);
+      barArea.appendChild(bar);
+    }
+  }
 }
 
 /**
