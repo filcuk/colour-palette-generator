@@ -1,39 +1,10 @@
 /**
- * UK outward codes outside England (Scotland, Wales, Northern Ireland).
- * These areas are omitted so the map frames England only.
+ * UK NUTS1 region codes shown with the divergent null colour (sample no-data).
  */
-export const UK_MAP_NON_ENGLAND_AREA_IDS = new Set([
-  // Scotland
-  'AB',
-  'DD',
-  'DG',
-  'EH',
-  'FK',
-  'G',
-  'HS',
-  'IV',
-  'KA',
-  'KW',
-  'KY',
-  'ML',
-  'PA',
-  'PH',
-  'TD',
-  'ZE',
-  // Wales
-  'CF',
-  'LD',
-  'LL',
-  'NP',
-  'SA',
-  // Northern Ireland
-  'BT',
-]);
-
-/** England outward codes rendered with the divergent null colour (sample no-data). */
-export const UK_MAP_NULL_DISPLAY_AREA_IDS = new Set(['DN', 'LA', 'PL', 'TN']);
+export const UK_REGIONS_NULL_DISPLAY_IDS = new Set(['UKI', 'UKN']);
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+const RAD = Math.PI / 180;
 
 /**
  * @param {string} hex
@@ -66,112 +37,51 @@ export function divergentFillForT(t, maximumHex, centerHex, minimumHex) {
   return mixHex(centerHex, minimumHex, -k);
 }
 
-/** Stable pseudo-volume in [-1, 1] per outward code (not used for map fill; kept for callers). */
-export function volumeTForAreaId(id) {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < id.length; i++) {
-    h ^= id.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return ((h >>> 0) / 2 ** 32) * 2 - 1;
-}
-
 /**
- * Evenly spaced t in [-1, 1] over sorted ids so the divergent ramp is used across the map.
- * @param {string[]} idsSorted
- * @returns {Map<string, number>}
- */
-function divergentTByEvenSpread(idsSorted) {
-  /** @type {Map<string, number>} */
-  const map = new Map();
-  const n = idsSorted.length;
-  if (n === 0) return map;
-  if (n === 1) {
-    map.set(idsSorted[0], 0);
-    return map;
-  }
-  for (let i = 0; i < n; i++) {
-    map.set(idsSorted[i], -1 + (2 * i) / (n - 1));
-  }
-  return map;
-}
-
-/**
- * @param {{ arcs: [number, number][][], transform: { scale: [number, number], translate: [number, number] } }} topology
- * @param {number} signedIndex
- * @returns {[number, number][]}
- */
-function decodeArc(topology, signedIndex) {
-  const arcIndex = signedIndex < 0 ? ~signedIndex : signedIndex;
-  const arc = topology.arcs[arcIndex];
-  const { scale, translate } = topology.transform;
-  let x = 0;
-  let y = 0;
-  const pts = [];
-  for (let i = 0; i < arc.length; i++) {
-    const p = arc[i];
-    if (i === 0) {
-      x = p[0];
-      y = p[1];
-    } else {
-      x += p[0];
-      y += p[1];
-    }
-    const lon = translate[0] + scale[0] * x;
-    const lat = translate[1] + scale[1] * y;
-    pts.push([lon, lat]);
-  }
-  if (signedIndex < 0) pts.reverse();
-  return pts;
-}
-
-/**
- * @param {{ arcs: [number, number][][], transform: { scale: [number, number], translate: [number, number] } }} topology
- * @param {number[]} arcIndices
- */
-function ringFromArcs(topology, arcIndices) {
-  /** @type {[number, number][]} */
-  let ring = [];
-  for (const idx of arcIndices) {
-    const next = decodeArc(topology, idx);
-    if (ring.length && next.length) {
-      const a = ring[ring.length - 1];
-      const b = next[0];
-      if (Math.abs(a[0] - b[0]) < 1e-9 && Math.abs(a[1] - b[1]) < 1e-9) {
-        next.shift();
-      }
-    }
-    ring = ring.concat(next);
-  }
-  return ring;
-}
-
-/**
- * @param {{ arcs: [number, number][][], transform: { scale: [number, number], translate: [number, number] } }} topology
- * @param {{ type: string, arcs: number[][][] | number[][] }} geom
+ * @param {{ type: string, coordinates: unknown }} geometry GeoJSON geometry
  * @returns {[number, number][][]}
  */
-function geometryToRings(topology, geom) {
+function geoJsonGeometryToLonLatRings(geometry) {
   /** @type {[number, number][][]} */
   const rings = [];
-  if (geom.type === 'Polygon') {
-    for (const ring of geom.arcs) rings.push(ringFromArcs(topology, ring));
+  if (!geometry || !geometry.type) return rings;
+  if (geometry.type === 'Polygon') {
+    const coords = /** @type {number[][][]} */ (geometry.coordinates);
+    for (const ring of coords) rings.push(ring.map(([lon, lat]) => [lon, lat]));
     return rings;
   }
-  if (geom.type === 'MultiPolygon') {
-    for (const polygon of geom.arcs) {
-      for (const ring of polygon) rings.push(ringFromArcs(topology, ring));
+  if (geometry.type === 'MultiPolygon') {
+    const polys = /** @type {number[][][][]} */ (geometry.coordinates);
+    for (const polygon of polys) {
+      for (const ring of polygon) rings.push(ring.map(([lon, lat]) => [lon, lat]));
     }
     return rings;
   }
   return rings;
 }
 
-const RAD = Math.PI / 180;
+/**
+ * @param {{ type: string, features?: { properties?: { id?: string }, geometry: { type: string, coordinates: unknown } }[] }} collection
+ * @returns {Map<string, [number, number][][]>}
+ */
+function ringsByRegionId(collection) {
+  /** @type {Map<string, [number, number][][]>} */
+  const map = new Map();
+  const features = collection.features;
+  if (!Array.isArray(features)) return map;
+  for (const f of features) {
+    const id = f.properties && f.properties.id != null ? String(f.properties.id) : '';
+    if (!id) continue;
+    const rings = geoJsonGeometryToLonLatRings(f.geometry);
+    if (!rings.length) continue;
+    if (!map.has(id)) map.set(id, []);
+    map.get(id).push(...rings);
+  }
+  return map;
+}
 
 /**
- * Oblique orthographic (tangent plane at lon0°, lat0°). Uniform scale on both axes
- * on the sphere; lon/lat in degrees.
+ * Oblique orthographic (tangent plane at lon0°, lat0°).
  * @returns {[number, number]}
  */
 function lonLatToOrthographic(lonDeg, latDeg, lon0Deg, lat0Deg) {
@@ -187,10 +97,9 @@ function lonLatToOrthographic(lonDeg, latDeg, lon0Deg, lat0Deg) {
 }
 
 /**
- * @param {[number, number][][]} rings lon/lat rings
+ * @param {[number, number][][]} rings
  * @param {number} lon0
  * @param {number} lat0
- * @returns {[number, number][][]}
  */
 function projectRingsOrthographic(rings, lon0, lat0) {
   return rings.map(ring => ring.map(([lon, lat]) => lonLatToOrthographic(lon, lat, lon0, lat0)));
@@ -218,40 +127,6 @@ function ringToPathD(ring, s, ox, oy, maxY) {
 }
 
 /**
- * @param {{ objects: Record<string, { type: string, geometries?: { type: string, arcs: unknown, id?: string }[] }> }} topology
- * @returns {Map<string, [number, number][][]>}
- */
-function geometriesById(topology) {
-  const coll = topology.objects['uk-postcode-area'];
-  if (!coll || coll.type !== 'GeometryCollection' || !Array.isArray(coll.geometries)) return new Map();
-  /** @type {Map<string, [number, number][][]>} */
-  const map = new Map();
-  for (const geom of coll.geometries) {
-    const id = geom.id;
-    if (id == null) continue;
-    const idStr = String(id);
-    const rings = geometryToRings(topology, geom);
-    if (!map.has(idStr)) map.set(idStr, []);
-    map.get(idStr).push(...rings);
-  }
-  return map;
-}
-
-/**
- * @param {Map<string, [number, number][][]>} byId
- * @returns {Map<string, [number, number][][]>}
- */
-function englandOnlyById(byId) {
-  /** @type {Map<string, [number, number][][]>} */
-  const map = new Map();
-  for (const [id, rings] of byId) {
-    if (UK_MAP_NON_ENGLAND_AREA_IDS.has(id)) continue;
-    map.set(id, rings);
-  }
-  return map;
-}
-
-/**
  * @param {[number, number][][]} rings
  * @returns {[number, number, number, number]}
  */
@@ -272,11 +147,31 @@ function boundsOfRings(rings) {
 }
 
 /**
+ * Evenly spaced t in [-1, 1] over sorted ids (null ids excluded).
+ * @param {string[]} idsSorted
+ * @returns {Map<string, number>}
+ */
+function divergentTByEvenSpread(idsSorted) {
+  /** @type {Map<string, number>} */
+  const map = new Map();
+  const n = idsSorted.length;
+  if (n === 0) return map;
+  if (n === 1) {
+    map.set(idsSorted[0], 0);
+    return map;
+  }
+  for (let i = 0; i < n; i++) {
+    map.set(idsSorted[i], -1 + (2 * i) / (n - 1));
+  }
+  return map;
+}
+
+/**
  * @param {SVGSVGElement} svg
- * @param {{ arcs: [number, number][][], objects: Record<string, unknown>, transform: { scale: [number, number], translate: [number, number] } }} topology
+ * @param {{ type: string, features?: { properties?: { id?: string }, geometry: { type: string, coordinates: unknown } }[] }} geojson
  * @param {{ maximum: string, center: string, minimum: string, nullColor: string, stroke: string, strokeWidth: number }} palette
  */
-export function renderUkPostcodeAreaMap(svg, topology, palette) {
+export function renderUkNuts1RegionsMap(svg, geojson, palette) {
   while (svg.firstChild) svg.removeChild(svg.firstChild);
 
   const vb = svg.viewBox.baseVal;
@@ -284,8 +179,7 @@ export function renderUkPostcodeAreaMap(svg, topology, palette) {
   const H = vb.height || 260;
   const pad = 4;
 
-  const byId = englandOnlyById(geometriesById(topology));
-  /** @type {[number, number, number, number]} */
+  const byId = ringsByRegionId(geojson);
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -338,13 +232,13 @@ export function renderUkPostcodeAreaMap(svg, topology, palette) {
   svg.appendChild(g);
 
   const ids = [...byId.keys()].sort();
-  const dataIds = ids.filter(id => !UK_MAP_NULL_DISPLAY_AREA_IDS.has(id));
+  const dataIds = ids.filter(id => !UK_REGIONS_NULL_DISPLAY_IDS.has(id));
   const tById = divergentTByEvenSpread(dataIds);
 
   for (const id of ids) {
     const rings = projectedById.get(id);
     if (!rings) continue;
-    const fill = UK_MAP_NULL_DISPLAY_AREA_IDS.has(id)
+    const fill = UK_REGIONS_NULL_DISPLAY_IDS.has(id)
       ? palette.nullColor
       : divergentFillForT(tById.get(id) ?? 0, palette.maximum, palette.center, palette.minimum);
 

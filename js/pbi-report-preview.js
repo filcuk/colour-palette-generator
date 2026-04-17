@@ -1,12 +1,12 @@
 import { state, getThemeColorsFromState, getSentimentColorsResolved, getDivergentColorsResolved } from './state.js';
 import { getStructuralColorsResolved } from './colour-export.js';
-import { renderUkPostcodeAreaMap } from './uk-postcode-map.js';
+import { renderUkNuts1RegionsMap } from './uk-regions-map.js';
 
-let ukPostcodeTopologyPromise;
+let ukRegionsGeojsonPromise;
 
-function ensureUkPostcodeTopology() {
-  if (!ukPostcodeTopologyPromise) {
-    ukPostcodeTopologyPromise = fetch(new URL('../data/uk-postcode-area.json', import.meta.url))
+function ensureUkRegionsGeojson() {
+  if (!ukRegionsGeojsonPromise) {
+    ukRegionsGeojsonPromise = fetch(new URL('../data/uk-nuts1-regions.geojson', import.meta.url))
       .then(r => (r.ok ? r.text() : null))
       .then(text => {
         if (text == null) return null;
@@ -20,7 +20,7 @@ function ensureUkPostcodeTopology() {
       })
       .catch(() => null);
   }
-  return ukPostcodeTopologyPromise;
+  return ukRegionsGeojsonPromise;
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -190,11 +190,11 @@ export function refreshPbiReportPreview(root) {
 
   const divColors = getDivergentColorsResolved();
   const nullDivergent = divColors.length >= 4 ? divColors[3] : secondaryBg;
-  ensureUkPostcodeTopology().then(topology => {
-    if (!topology || !root.isConnected) return;
+  ensureUkRegionsGeojson().then(geojson => {
+    if (!geojson || !root.isConnected) return;
     const mapSvg = root.querySelector('#pbiUkMapSvg');
     if (!(mapSvg instanceof SVGSVGElement)) return;
-    renderUkPostcodeAreaMap(mapSvg, topology, {
+    renderUkNuts1RegionsMap(mapSvg, geojson, {
       maximum: divColors[0],
       center: divColors[1],
       minimum: divColors[2],
