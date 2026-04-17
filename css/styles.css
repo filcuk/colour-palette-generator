@@ -1,4 +1,6 @@
 :root {
+  /* Default page column width; doubled when preview column is open (wide screens only). */
+  --body-content-max: 1000px;
   --gap: 12px;
   --size: 90px;
   --radius: 10px;
@@ -23,12 +25,13 @@
 
 body {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  max-width: 1000px;
+  max-width: var(--body-content-max);
   margin: 28px auto;
   padding: 0 28px;
   box-sizing: border-box;
   background: #f7f7f8;
   color: var(--ink);
+  transition: max-width 0.36s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 h1 {
@@ -123,6 +126,186 @@ h1 {
   font: 600 20px/1.3 var(--font);
   color: #333;
   letter-spacing: .02em;
+}
+
+.colours-section-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px 14px;
+  margin-bottom: 12px;
+}
+
+.colours-section-header h2 {
+  margin: 0;
+}
+
+.colours-preview-btn {
+  flex-shrink: 0;
+}
+
+.colours-preview-btn:hover {
+  background: #f0f4fa;
+  color: #111;
+  border-color: rgba(0, 0, 0, 0.22);
+}
+
+/* Grid: main (themes + colours + export) | preview. Wide + preview open = two equal columns. */
+.app-layout {
+  width: 100%;
+}
+
+.app-layout-main {
+  min-width: 0;
+}
+
+.app-layout-preview {
+  min-width: 0;
+}
+
+.colours-preview-panel {
+  box-sizing: border-box;
+}
+
+.colours-preview-panel-title {
+  margin: 0 0 10px 0;
+  font: 600 15px/1.3 var(--font);
+  color: #555;
+}
+
+.colours-preview-panel-body {
+  min-height: 100px;
+}
+
+.colours-preview-placeholder {
+  margin: 0;
+  font: 13px/1.5 var(--font);
+  color: #666;
+}
+
+@media (max-width: 1079px) {
+  .app-layout-preview {
+    width: 100%;
+  }
+
+  .colours-preview-panel:not(.colours-preview-panel--open) {
+    display: none;
+  }
+
+  .colours-preview-panel.colours-preview-panel--open {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    animation: colours-preview-stacked-in 0.32s ease;
+  }
+}
+
+@keyframes colours-preview-stacked-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 1080px) {
+  .app-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0fr);
+    gap: 0;
+    align-items: start;
+    width: 100%;
+    transition: grid-template-columns 0.36s cubic-bezier(0.22, 1, 0.36, 1), gap 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .app-layout-main {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .app-layout-preview {
+    grid-column: 2;
+    grid-row: 1;
+    overflow: hidden;
+    align-self: start;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s ease;
+  }
+
+  body:has(.app-layout--preview-open) {
+    max-width: min(calc(var(--body-content-max) * 2), calc(100vw - 56px));
+  }
+
+  .app-layout--preview-open {
+    --app-preview-column-gap: 1.25rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--app-preview-column-gap);
+    max-width: 100%;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .app-layout--preview-open .app-layout-preview {
+    overflow: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .colours-preview-panel {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border-width: 0;
+    border-style: solid;
+    border-color: transparent;
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+    transition: padding 0.36s ease, border-width 0.12s ease, background 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .app-layout--preview-open .colours-preview-panel {
+    padding: 14px 16px;
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0.1);
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    overflow: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .colours-preview-panel.colours-preview-panel--open {
+    animation: none;
+  }
+
+  body {
+    transition: none;
+  }
+
+  .app-layout,
+  .app-layout-main,
+  .app-layout-preview,
+  .colours-preview-panel {
+    transition: none !important;
+  }
 }
 
 .controls {

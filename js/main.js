@@ -20,6 +20,7 @@ import { initUi } from './ui.js';
 import { clampThemeName } from './theme-name.js';
 import { createTwiceConfirmPair } from './twice-confirm.js';
 import { showToast } from './toasts.js';
+import { initColoursPreviewLayout } from './colours-preview-layout.js';
 
 function toastFirstConfirm(which) {
   if (which === 'reset') {
@@ -123,6 +124,12 @@ if (refs.resetBtn && refs.deleteThemeBtn) {
     onArm: toastFirstConfirm
   });
 }
+
+initColoursPreviewLayout({
+  previewBtn: document.getElementById('coloursPreviewBtn'),
+  layoutEl: document.getElementById('appLayout'),
+  panelEl: document.getElementById('coloursPreviewPanel')
+});
 
 const fromHash = readStateFromHash();
 const stored = fromHash || loadState();
