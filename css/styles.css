@@ -268,7 +268,7 @@ h1 {
   align-content: start;
 }
 
-/* Masonry-style chart columns: bar + waterfall share left height; map grows above table on the right */
+/* Masonry-style chart columns: bar + waterfall share left height; treemap grows above table on the right */
 .pbi-chart-stack {
   display: flex;
   flex-direction: column;
@@ -288,7 +288,7 @@ h1 {
 }
 
 .pbi-chart-stack--left > .pbi-visual,
-.pbi-chart-stack--right > .pbi-map-chart {
+.pbi-chart-stack--right > .pbi-treemap-chart {
   flex: 1 1 0;
   min-height: 0;
 }
@@ -297,21 +297,41 @@ h1 {
   min-height: 72px;
 }
 
-.pbi-chart-stack--right > .pbi-map-chart {
+.pbi-chart-stack--right > .pbi-treemap-chart {
   min-height: 120px;
 }
 
-/* Letterboxed fit: map keeps viewBox aspect ratio; slot is a size container for cqw/cqh */
-.pbi-map-slot {
+.pbi-treemap-slot {
   flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   min-height: 0;
   min-width: 0;
   overflow: hidden;
-  container-type: size;
-  container-name: pbi-map-slot;
+}
+
+.pbi-treemap-inner {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: repeat(10, minmax(0, 1fr));
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  min-height: 120px;
+  box-sizing: border-box;
+}
+
+.pbi-treemap-cell {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px 5px;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--pbi-border) 70%, transparent);
+  font: 600 9px/1.2 system-ui, sans-serif;
+  color: var(--pbi-fg);
+  text-shadow: 0 0 3px var(--pbi-card-bg), 0 0 6px var(--pbi-card-bg);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
 }
 
 .pbi-chart-stack--right > .pbi-table-wrap {
@@ -402,29 +422,6 @@ h1 {
   height: var(--h, 50%);
   background: var(--bc, var(--pbi-accent));
   border-radius: 3px 3px 0 0;
-}
-
-.pbi-map-svg {
-  display: block;
-  flex-shrink: 1;
-  box-sizing: border-box;
-  margin-inline: auto;
-  aspect-ratio: 220 / 260;
-  /* ~20% narrower than full-bleed fit; uniform scale (no non-uniform stretch) */
-  width: min(80cqw, calc(80cqh * 220 / 260));
-  height: auto;
-  max-width: 100%;
-  max-height: 100%;
-  min-width: 0;
-  min-height: 0;
-}
-
-@supports not (width: min(1cqw, 1px)) {
-  .pbi-map-svg {
-    max-width: 100%;
-    height: auto;
-    max-height: 100%;
-  }
 }
 
 .pbi-waterfall-svg {
