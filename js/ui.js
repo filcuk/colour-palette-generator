@@ -19,8 +19,7 @@ const STRUCTURAL_SWATCH_HELP = [
   'Light borders / chrome',
   'Dividers & muted detail',
   'Report page background',
-  'Pane-style background areas',
-  'Table grids & accent lines'
+  'Pane-style background areas'
 ];
 
 /**
@@ -209,10 +208,9 @@ function renderStructuralSwatches() {
     'Third Level',
     'Fourth Level',
     'Background',
-    'Secondary Background',
-    'Table Accent'
+    'Secondary Background'
   ];
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 6; i++) {
     const val = toFullHex(state.structuralColors[i]) || '';
     html += swatchHTML('structural', i, val, labels[i], labels[i], false);
   }

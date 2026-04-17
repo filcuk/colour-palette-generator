@@ -63,14 +63,15 @@ describe('buildThemeJsonPayloadFromState', () => {
     const p = buildThemeJsonPayloadFromState(
       minimalState({
         structuralEnabled: true,
-        structuralColors: ['#111111', '#222222', '#333333', '#444444', '#555555', '#666666', '#777777']
+        structuralColors: ['#111111', '#222222', '#333333', '#444444', '#555555', '#666666']
       })
     );
     for (const k of STRUCTURAL_KEYS) {
       expect(p[k]).toMatch(/^#/);
     }
     expect(p.firstLevelElements).toBe('#111111');
-    expect(p.tableAccent).toBe('#777777');
+    expect(p.secondaryBackground).toBe('#666666');
+    expect(p).not.toHaveProperty('tableAccent');
   });
 
   it('omits structural keys when structural section is disabled', () => {
@@ -107,7 +108,6 @@ describe('mergeStructuralColorsFromThemeJsonObjects', () => {
     expect(merged[3]).toBe('#373D45');
     expect(merged[4]).toBe('#0E1117');
     expect(merged[5]).toBe('#9198A1');
-    expect(merged[6]).toBe(DEFAULTS_STRUCTURAL[6]);
   });
 });
 
@@ -199,15 +199,7 @@ describe('buildExportSvgString', () => {
   });
 
   it('embeds structural colours in metadata only when enabled (no extra SVG row)', () => {
-    const structural = structuralObjectFromResolved([
-      '#252423',
-      '#605E5C',
-      '#F3F2F1',
-      '#B3B0AD',
-      '#FFFFFF',
-      '#C8C6C4',
-      '#118DFF'
-    ]);
+    const structural = structuralObjectFromResolved(['#252423', '#605E5C', '#F3F2F1', '#B3B0AD', '#FFFFFF', '#C8C6C4']);
     const svg = buildExportSvgString({
       themeColors: ['#ABCDEF'],
       sentiment: [],

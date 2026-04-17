@@ -20,12 +20,9 @@ export const STRUCTURAL_KEYS = [
   'thirdLevelElements',
   'fourthLevelElements',
   'background',
-  'secondaryBackground',
-  'tableAccent'
+  'secondaryBackground'
 ];
-export const DEFAULTS_STRUCTURAL = [
-  '#252423', '#605E5C', '#F3F2F1', '#B3B0AD', '#FFFFFF', '#C8C6C4', '#118DFF'
-];
+export const DEFAULTS_STRUCTURAL = ['#252423', '#605E5C', '#F3F2F1', '#B3B0AD', '#FFFFFF', '#C8C6C4'];
 
 const clampHex = s => s.replace(/[^0-9a-f]/gi, '').slice(0, 6).toUpperCase();
 function toFullHex(raw) {
@@ -97,8 +94,7 @@ export const STRUCTURAL_IMPORT_ALIAS_KEYS = [
   ['foregroundNeutralTertiary'],
   ['backgroundNeutral'],
   ['background'],
-  ['backgroundLight'],
-  ['tableAccent', 'accent']
+  ['backgroundLight']
 ];
 
 /**

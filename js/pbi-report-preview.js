@@ -213,15 +213,7 @@ export function refreshPbiReportPreview(root) {
   if (!root) return;
   const theme = getThemeColorsFromState();
   const s = getStructuralColorsResolved(state);
-  const [
-    firstLevel,
-    secondLevel,
-    thirdLevel,
-    fourthLevel,
-    pageBg,
-    secondaryBg,
-    tableAccent
-  ] = s;
+  const [firstLevel, secondLevel, thirdLevel, fourthLevel, pageBg, secondaryBg] = s;
 
   root.style.setProperty('--pbi-page-bg', pageBg);
   root.style.setProperty('--pbi-card-bg', secondaryBg);
@@ -229,7 +221,7 @@ export function refreshPbiReportPreview(root) {
   root.style.setProperty('--pbi-fg-secondary', secondLevel);
   root.style.setProperty('--pbi-fg-muted', thirdLevel);
   root.style.setProperty('--pbi-border', fourthLevel);
-  root.style.setProperty('--pbi-accent', tableAccent);
+  root.style.setProperty('--pbi-accent', theme[0] || '#118DFF');
 
   const [sentGood, sentNeutral, sentBad] = getSentimentColorsResolved();
   root.style.setProperty('--pbi-sentiment-good', sentGood);

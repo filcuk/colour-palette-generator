@@ -139,8 +139,9 @@ export function loadState() {
       divergentColors = migrateLegacyDivergentOrder(divergentColors);
     }
     let structuralColors = DEFAULTS_STRUCTURAL.slice();
-    if (Array.isArray(data.structuralColors) && data.structuralColors.length >= 7) {
-      for (let i = 0; i < 7; i++) {
+    if (Array.isArray(data.structuralColors) && data.structuralColors.length >= 6) {
+      const n = Math.min(6, data.structuralColors.length);
+      for (let i = 0; i < n; i++) {
         const h = toFullHex(data.structuralColors[i]);
         if (h) structuralColors[i] = h;
       }
@@ -180,7 +181,7 @@ function stateToHashPayload() {
     if (state.divergentNullEnabled === false) payload.dn = false;
   }
   if (state.structuralEnabled) {
-    payload.stc = (state.structuralColors || DEFAULTS_STRUCTURAL).slice(0, 7).map(c => (toFullHex(c) || '').slice(1) || '000000');
+    payload.stc = (state.structuralColors || DEFAULTS_STRUCTURAL).slice(0, 6).map(c => (toFullHex(c) || '').slice(1) || '000000');
     payload.ste = true;
   }
   return payload;
@@ -206,8 +207,8 @@ export function hashPayloadToStoredShape(p) {
     divergentColors = migrateLegacyDivergentOrder(divergentColors);
   }
   let structuralColors = DEFAULTS_STRUCTURAL.slice();
-  if (Array.isArray(p.stc) && p.stc.length >= 7) {
-    for (let i = 0; i < 7; i++) {
+  if (Array.isArray(p.stc) && p.stc.length >= 6) {
+    for (let i = 0; i < 6; i++) {
       const x = p.stc[i];
       const h = typeof x === 'string' && x.length >= 6 ? '#' + x.replace(/^#/, '').slice(0, 6) : null;
       if (h) structuralColors[i] = h;
@@ -311,9 +312,9 @@ export function mergeStoredIntoState(stored) {
   }
   if (stored.sentimentEnabled !== undefined) state.sentimentEnabled = stored.sentimentEnabled === true;
   if (stored.divergentEnabled !== undefined) state.divergentEnabled = stored.divergentEnabled === true;
-  if (stored.structuralColors && stored.structuralColors.length >= 7) {
+  if (stored.structuralColors && stored.structuralColors.length >= 6) {
     const next = DEFAULTS_STRUCTURAL.slice();
-    const src = stored.structuralColors.slice(0, 7);
+    const src = stored.structuralColors.slice(0, 6);
     for (let i = 0; i < src.length; i++) {
       const h = toFullHex(src[i]);
       if (h) next[i] = h;

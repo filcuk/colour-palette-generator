@@ -308,8 +308,8 @@ export function createThemesController(refs, getUi, io, opts = {}) {
     state.structuralEnabled = theme.structuralEnabled === true;
     state.divergentNullEnabled = theme.divergentNullEnabled !== false;
     const nextStructural = DEFAULTS_STRUCTURAL.slice();
-    if (Array.isArray(theme.structuralColors) && theme.structuralColors.length >= 7) {
-      for (let i = 0; i < 7; i++) {
+    if (Array.isArray(theme.structuralColors) && theme.structuralColors.length >= 6) {
+      for (let i = 0; i < 6; i++) {
         const h = toFullHex(theme.structuralColors[i]);
         if (h) nextStructural[i] = h;
       }
