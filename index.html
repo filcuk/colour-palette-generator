@@ -269,35 +269,41 @@
                     <span class="pbi-card-delta pbi-card-delta--up">▲ 12</span>
                   </div>
                 </div>
-                <div class="pbi-bar-chart pbi-visual" aria-hidden="true">
-                  <div class="pbi-visual-title">Sales by month</div>
-                  <div class="pbi-bar-area" id="pbiBarArea" aria-hidden="true"></div>
+                <div class="pbi-chart-stack pbi-chart-stack--left" aria-hidden="true">
+                  <div class="pbi-bar-chart pbi-visual">
+                    <div class="pbi-visual-title">Sales by month</div>
+                    <div class="pbi-bar-area" id="pbiBarArea" aria-hidden="true"></div>
+                  </div>
+                  <div class="pbi-waterfall-chart pbi-visual">
+                    <div class="pbi-visual-title">Profit &amp; loss (waterfall)</div>
+                    <svg class="pbi-waterfall-svg" id="pbiWaterfallSvg" viewBox="0 0 260 90" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+                  </div>
                 </div>
-                <div class="pbi-pie-chart pbi-visual" aria-hidden="true">
-                  <div class="pbi-visual-title">Share by segment</div>
-                  <div class="pbi-pie"></div>
-                </div>
-                <div class="pbi-waterfall-chart pbi-visual" aria-hidden="true">
-                  <div class="pbi-visual-title">Profit &amp; loss (waterfall)</div>
-                  <svg class="pbi-waterfall-svg" id="pbiWaterfallSvg" viewBox="0 0 260 90" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
-                </div>
-                <div class="pbi-table-wrap pbi-visual">
-                  <div class="pbi-visual-title">Top products</div>
-                  <table class="pbi-table">
-                    <thead>
-                      <tr>
-                        <th>Product</th>
-                        <th class="pbi-num">Qty</th>
-                        <th class="pbi-num">Sales</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr><td>Alpha</td><td class="pbi-num">120</td><td class="pbi-num">$42K</td></tr>
-                      <tr><td>Bravo</td><td class="pbi-num">98</td><td class="pbi-num">$31K</td></tr>
-                      <tr><td>Charlie</td><td class="pbi-num">76</td><td class="pbi-num">$28K</td></tr>
-                      <tr><td>Delta</td><td class="pbi-num">54</td><td class="pbi-num">$19K</td></tr>
-                    </tbody>
-                  </table>
+                <div class="pbi-chart-stack pbi-chart-stack--right" aria-hidden="true">
+                  <div class="pbi-map-chart pbi-visual">
+                    <div class="pbi-visual-title">Volume by postcode area</div>
+                    <div class="pbi-map-slot">
+                      <svg class="pbi-map-svg" id="pbiUkMapSvg" viewBox="0 0 220 260" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+                    </div>
+                  </div>
+                  <div class="pbi-table-wrap pbi-visual">
+                    <div class="pbi-visual-title">Top products</div>
+                    <table class="pbi-table">
+                      <thead>
+                        <tr>
+                          <th>Product</th>
+                          <th class="pbi-num">Qty</th>
+                          <th class="pbi-num">Sales</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td>Alpha</td><td class="pbi-num">120</td><td class="pbi-num">$42K</td></tr>
+                        <tr><td>Bravo</td><td class="pbi-num">98</td><td class="pbi-num">$31K</td></tr>
+                        <tr><td>Charlie</td><td class="pbi-num">76</td><td class="pbi-num">$28K</td></tr>
+                        <tr><td>Delta</td><td class="pbi-num">54</td><td class="pbi-num">$19K</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>

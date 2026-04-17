@@ -1,5 +1,27 @@
-import { state, getThemeColorsFromState, getSentimentColorsResolved } from './state.js';
+import { state, getThemeColorsFromState, getSentimentColorsResolved, getDivergentColorsResolved } from './state.js';
 import { getStructuralColorsResolved } from './colour-export.js';
+import { renderUkPostcodeAreaMap } from './uk-postcode-map.js';
+
+let ukPostcodeTopologyPromise;
+
+function ensureUkPostcodeTopology() {
+  if (!ukPostcodeTopologyPromise) {
+    ukPostcodeTopologyPromise = fetch(new URL('../data/uk-postcode-area.json', import.meta.url))
+      .then(r => (r.ok ? r.text() : null))
+      .then(text => {
+        if (text == null) return null;
+        const i = text.indexOf('{');
+        if (i < 0) return null;
+        try {
+          return JSON.parse(text.slice(i));
+        } catch {
+          return null;
+        }
+      })
+      .catch(() => null);
+  }
+  return ukPostcodeTopologyPromise;
+}
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -165,6 +187,22 @@ export function refreshPbiReportPreview(root) {
       barArea.appendChild(bar);
     }
   }
+
+  const divColors = getDivergentColorsResolved();
+  const nullDivergent = divColors.length >= 4 ? divColors[3] : secondaryBg;
+  ensureUkPostcodeTopology().then(topology => {
+    if (!topology || !root.isConnected) return;
+    const mapSvg = root.querySelector('#pbiUkMapSvg');
+    if (!(mapSvg instanceof SVGSVGElement)) return;
+    renderUkPostcodeAreaMap(mapSvg, topology, {
+      maximum: divColors[0],
+      center: divColors[1],
+      minimum: divColors[2],
+      nullColor: nullDivergent,
+      stroke: fourthLevel,
+      strokeWidth: 0.32
+    });
+  });
 }
 
 /**
