@@ -198,6 +198,9 @@ h1 {
   --pbi-c2: #038387;
   --pbi-c3: #8764b8;
   --pbi-c4: #e66c37;
+  --pbi-sentiment-good: #009688;
+  --pbi-sentiment-neutral: #b3b3b3;
+  --pbi-sentiment-bad: #c4362e;
   font: 12px/1.35 system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
   color: var(--pbi-fg);
   border-radius: 8px;
@@ -369,27 +372,17 @@ h1 {
   );
 }
 
-.pbi-line-chart {
+.pbi-waterfall-chart {
   grid-column: 1;
   grid-row: 4;
 }
 
-.pbi-line-svg {
+.pbi-waterfall-svg {
   width: 100%;
   height: auto;
-  min-height: 72px;
+  min-height: 88px;
+  max-height: 120px;
   display: block;
-}
-
-.pbi-line-fill {
-  fill: var(--pbi-accent);
-  opacity: 0.2;
-}
-
-.pbi-line-stroke {
-  stroke: var(--pbi-accent);
-  stroke-width: 2.5;
-  vector-effect: non-scaling-stroke;
 }
 
 .pbi-table-wrap {

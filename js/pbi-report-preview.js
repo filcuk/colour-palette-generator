@@ -1,5 +1,117 @@
-import { state, getThemeColorsFromState } from './state.js';
+import { state, getThemeColorsFromState, getSentimentColorsResolved } from './state.js';
 import { getStructuralColorsResolved } from './colour-export.js';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/**
+ * @param {SVGSVGElement} svg
+ */
+function renderPbiWaterfallSvg(svg) {
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  const W = 260;
+  const H = 90;
+  const padL = 6;
+  const padR = 6;
+  const padT = 8;
+  const padB = 10;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const baselineY = padT + chartH;
+  const maxVal = 52;
+
+  const yAt = v => baselineY - (v / maxVal) * chartH;
+
+  /** @type {{ kind: string, y: number, h: number, fill: string }[]} */
+  const bars = [];
+
+  const startVal = 38;
+  let cum = startVal;
+  bars.push({
+    kind: 'total',
+    y: yAt(startVal),
+    h: baselineY - yAt(startVal),
+    fill: 'var(--pbi-sentiment-neutral)'
+  });
+
+  const deltas = [
+    { dir: 'up', d: 14 },
+    { dir: 'down', d: 9 },
+    { dir: 'down', d: 7 },
+    { dir: 'up', d: 6 }
+  ];
+
+  for (const { dir, d } of deltas) {
+    if (dir === 'up') {
+      const bottom = cum;
+      cum += d;
+      const top = cum;
+      bars.push({
+        kind: 'up',
+        y: yAt(top),
+        h: yAt(bottom) - yAt(top),
+        fill: 'var(--pbi-sentiment-good)'
+      });
+    } else {
+      const top = cum;
+      cum -= d;
+      const bottom = cum;
+      bars.push({
+        kind: 'down',
+        y: yAt(top),
+        h: yAt(bottom) - yAt(top),
+        fill: 'var(--pbi-sentiment-bad)'
+      });
+    }
+  }
+
+  const endVal = 42;
+  bars.push({
+    kind: 'total',
+    y: yAt(endVal),
+    h: baselineY - yAt(endVal),
+    fill: 'var(--pbi-sentiment-neutral)'
+  });
+
+  const cumAfterBar = [startVal];
+  let run = startVal;
+  for (const { dir, d } of deltas) {
+    if (dir === 'up') run += d;
+    else run -= d;
+    cumAfterBar.push(run);
+  }
+  cumAfterBar.push(endVal);
+
+  const nb = bars.length;
+  const colW = chartW / nb;
+
+  for (let i = 0; i < nb; i++) {
+    const b = bars[i];
+    const x = padL + i * colW + colW * 0.12;
+    const w = colW * 0.76;
+    const rect = document.createElementNS(SVG_NS, 'rect');
+    rect.setAttribute('x', String(x));
+    rect.setAttribute('y', String(b.y));
+    rect.setAttribute('width', String(w));
+    rect.setAttribute('height', String(Math.max(0.5, b.h)));
+    rect.setAttribute('rx', '2');
+    rect.setAttribute('fill', b.fill);
+    svg.appendChild(rect);
+
+    if (i < nb - 1) {
+      const yLine = yAt(cumAfterBar[i]);
+      const line = document.createElementNS(SVG_NS, 'line');
+      line.setAttribute('x1', String(x + w));
+      line.setAttribute('x2', String(padL + (i + 1) * colW + colW * 0.12));
+      line.setAttribute('y1', String(yLine));
+      line.setAttribute('y2', String(yLine));
+      line.setAttribute('stroke', 'var(--pbi-border)');
+      line.setAttribute('stroke-width', '1');
+      line.setAttribute('stroke-dasharray', '2 2');
+      svg.appendChild(line);
+    }
+  }
+}
 
 /**
  * Push current palette + structural colours onto CSS custom properties under `root`
@@ -27,6 +139,14 @@ export function refreshPbiReportPreview(root) {
   root.style.setProperty('--pbi-fg-muted', thirdLevel);
   root.style.setProperty('--pbi-border', fourthLevel);
   root.style.setProperty('--pbi-accent', tableAccent);
+
+  const [sentGood, sentNeutral, sentBad] = getSentimentColorsResolved();
+  root.style.setProperty('--pbi-sentiment-good', sentGood);
+  root.style.setProperty('--pbi-sentiment-neutral', sentNeutral);
+  root.style.setProperty('--pbi-sentiment-bad', sentBad);
+
+  const wfSvg = root.querySelector('#pbiWaterfallSvg');
+  if (wfSvg instanceof SVGSVGElement) renderPbiWaterfallSvg(wfSvg);
 
   const n = Math.max(1, theme.length);
   for (let i = 0; i < 16; i++) {
