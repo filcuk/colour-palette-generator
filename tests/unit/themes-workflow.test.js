@@ -112,6 +112,7 @@ async function createHarness(options = {}) {
     },
     renderSentimentSwatches() {},
     renderStructuralSwatches() {},
+    renderAdvancedSwatches() {},
     renderDivergentSwatches() {
       if (typeof onDivergentRender === 'function') onDivergentRender(state.divergentNullEnabled);
     },

@@ -24,6 +24,11 @@ export const STRUCTURAL_KEYS = [
 ];
 export const DEFAULTS_STRUCTURAL = ['#252423', '#605E5C', '#F3F2F1', '#B3B0AD', '#FFFFFF', '#C8C6C4'];
 
+/** Page, visual, title — same order as app state {@link mergeAdvancedColorsFromThemeJsonObjects}. */
+export const DEFAULTS_ADVANCED = ['#FAFAFA', '#FFFFFF', '#FFFFFF'];
+/** [page, visual] transparency % (0 = opaque, 100 = fully transparent), Power BI `background[].transparency`. */
+export const DEFAULTS_ADVANCED_TRANSPARENCY_PCT = [14, 0];
+
 const clampHex = s => s.replace(/[^0-9a-f]/gi, '').slice(0, 6).toUpperCase();
 function toFullHex(raw) {
   if (!raw) return null;
@@ -129,6 +134,89 @@ export function mergeStructuralColorsFromThemeJsonObjects(sources) {
   return { merged, any };
 }
 
+/**
+ * Read first `background[]` entry (Power BI theme `visualStyles` shape).
+ * @param {Record<string, unknown>|null|undefined} container — e.g. `visualStyles.page['*']` or `visualStyles['*']['*']`
+ * @returns {{ hex: string, transparency: number } | null}
+ */
+export function readPbiVisualStyleBackgroundEntry(container) {
+  if (!container || typeof container !== 'object' || Array.isArray(container)) return null;
+  const bg = container.background;
+  if (!Array.isArray(bg) || !bg[0] || typeof bg[0] !== 'object') return null;
+  const entry = bg[0];
+  const solid = entry.color && typeof entry.color === 'object' ? entry.color.solid : null;
+  let hex = null;
+  if (solid && typeof solid.color === 'string') hex = toFullHex(solid.color);
+  if (!hex) return null;
+  const tr = entry.transparency;
+  const transparency =
+    typeof tr === 'number' && Number.isFinite(tr)
+      ? Math.max(0, Math.min(100, Math.round(tr)))
+      : 0;
+  return { hex, transparency };
+}
+
+/**
+ * @param {Array<Record<string, unknown>|null|undefined>} sources — theme roots / nested `theme` / `reportTheme` / `themes[]`
+ * @returns {{ found: false } | { found: true, advancedColors: string[], advancedTransparencyPct: number[] }}
+ */
+export function mergeAdvancedColorsFromThemeJsonObjects(sources) {
+  const list = (sources || []).filter(s => s && typeof s === 'object' && !Array.isArray(s));
+  let page = null;
+  let visual = null;
+  let titleHex = null;
+
+  for (const src of list) {
+    const vs = src.visualStyles;
+    if (vs && typeof vs === 'object' && !Array.isArray(vs)) {
+      const pageNode = vs.page;
+      if (pageNode && typeof pageNode === 'object' && !Array.isArray(pageNode)) {
+        const pageInner = pageNode['*'] != null && typeof pageNode['*'] === 'object' ? pageNode['*'] : pageNode;
+        const p = readPbiVisualStyleBackgroundEntry(pageInner);
+        if (p) page = p;
+      }
+      const star = vs['*'];
+      if (star && typeof star === 'object' && !Array.isArray(star)) {
+        const inner = star['*'] != null && typeof star['*'] === 'object' ? star['*'] : star;
+        const v = readPbiVisualStyleBackgroundEntry(inner);
+        if (v) visual = v;
+      }
+    }
+    const tc = src.textClasses;
+    if (tc && typeof tc === 'object' && !Array.isArray(tc) && tc.title && typeof tc.title === 'object') {
+      const t = tc.title;
+      const c =
+        t.color != null
+          ? t.color
+          : t.fill && typeof t.fill === 'object' && t.fill.solid
+            ? t.fill.solid.color
+            : null;
+      const h = typeof c === 'string' ? toFullHex(c) : toFullHex(c && typeof c === 'object' ? c.color : c);
+      if (h) titleHex = h;
+    }
+  }
+
+  if (!page && !visual && !titleHex) return { found: false };
+
+  const advancedColors = DEFAULTS_ADVANCED.slice();
+  const advancedTransparencyPct = DEFAULTS_ADVANCED_TRANSPARENCY_PCT.slice();
+  if (page) {
+    advancedColors[0] = page.hex;
+    advancedTransparencyPct[0] = page.transparency;
+  }
+  if (visual) {
+    advancedColors[1] = visual.hex;
+    advancedTransparencyPct[1] = visual.transparency;
+  }
+  if (titleHex) advancedColors[2] = titleHex;
+
+  return {
+    found: true,
+    advancedColors,
+    advancedTransparencyPct
+  };
+}
+
 export function buildThemeJsonPayloadFromState(s) {
   const nm = (s.name || '').trim();
   const dataColors = getThemeColorsFromState(s);
@@ -152,6 +240,50 @@ export function buildThemeJsonPayloadFromState(s) {
       payload[k] = structural[i];
     });
   }
+  if (s.advancedEnabled) {
+    const ac = (s.advancedColors || DEFAULTS_ADVANCED).slice(0, 3);
+    const at = (s.advancedTransparencyPct || DEFAULTS_ADVANCED_TRANSPARENCY_PCT).slice(0, 2);
+    const pageHex = toFullHex(ac[0]) || DEFAULTS_ADVANCED[0];
+    const visualHex = toFullHex(ac[1]) || DEFAULTS_ADVANCED[1];
+    const titleHex = toFullHex(ac[2]) || DEFAULTS_ADVANCED[2];
+    const pageT = Math.max(0, Math.min(100, Math.round(Number(at[0]) || 0)));
+    const visualT = Math.max(0, Math.min(100, Math.round(Number(at[1]) || 0)));
+    payload.textClasses = {
+      title: {
+        color: titleHex
+      }
+    };
+    payload.visualStyles = {
+      '*': {
+        '*': {
+          background: [
+            {
+              color: {
+                solid: {
+                  color: visualHex
+                }
+              },
+              transparency: visualT
+            }
+          ]
+        }
+      },
+      page: {
+        '*': {
+          background: [
+            {
+              color: {
+                solid: {
+                  color: pageHex
+                }
+              },
+              transparency: pageT
+            }
+          ]
+        }
+      }
+    };
+  }
   return payload;
 }
 
@@ -165,6 +297,9 @@ export function buildExportSvgString(opts) {
     divergentEnabled,
     structuralEnabled = false,
     structural = null,
+    advancedEnabled = false,
+    advancedColors = null,
+    advancedTransparencyPct = null,
     hideColourLabels = false,
     forPreview = false
   } = opts;
@@ -260,20 +395,31 @@ export function buildExportSvgString(opts) {
   }
 
   const hasStructuralMeta = structuralEnabled && structural && typeof structural === 'object';
+  const hasAdvancedMeta =
+    advancedEnabled &&
+    Array.isArray(advancedColors) &&
+    advancedColors.length >= 3;
   const meta = {
     app: 'colour-palette',
-    version: 8,
+    version: 9,
     name: (themeName || '').trim(),
     count,
     colors: themeColors,
     ...(sentimentEnabled && sentiment.length === 3 ? { sentimentColors: sentiment } : {}),
     ...(divergentEnabled && divergent.length >= 3 ? { divergentColors: divergent } : {}),
-    ...(hasStructuralMeta ? { structural } : {})
+    ...(hasStructuralMeta ? { structural } : {}),
+    ...(hasAdvancedMeta
+      ? {
+          advancedEnabled: true,
+          advancedColors: advancedColors.slice(0, 3),
+          advancedTransparencyPct: (advancedTransparencyPct || DEFAULTS_ADVANCED_TRANSPARENCY_PCT).slice(0, 2)
+        }
+      : {})
   };
   const svgStyle = forPreview ? ' style="max-width:100%;height:auto"' : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${safeTitle}"${svgStyle}>
   <title>${safeTitle}</title>
-  <desc>Theme: ${safeTitle}. Palette exported with ${count} theme swatch(es)${hasSentiment ? ', sentiment row' : ''}${hasDivergent ? ', divergent row' : ''}${hasStructuralMeta ? ', structural colours in metadata only' : ''}. Metadata included for re-import.</desc>
+  <desc>Theme: ${safeTitle}. Palette exported with ${count} theme swatch(es)${hasSentiment ? ', sentiment row' : ''}${hasDivergent ? ', divergent row' : ''}${hasStructuralMeta ? ', structural colours in metadata only' : ''}${hasAdvancedMeta ? ', advanced colours in metadata' : ''}. Metadata included for re-import.</desc>
   <metadata id="palette-meta">${JSON.stringify(meta)}</metadata>
   ${nodes}
 </svg>`;

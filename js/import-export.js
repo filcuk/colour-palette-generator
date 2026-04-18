@@ -5,7 +5,10 @@ import {
   DEFAULTS_SENTIMENT,
   DEFAULTS_DIVERGENT,
   DEFAULTS_STRUCTURAL,
+  DEFAULTS_ADVANCED,
+  DEFAULTS_ADVANCED_TRANSPARENCY_PCT,
   mergeStructuralColorsFromThemeJsonObjects,
+  mergeAdvancedColorsFromThemeJsonObjects,
   STRUCTURAL_KEYS
 } from './colour-export.js';
 import { toFullHex, sanitizeNameForFile } from './colour-math.js';
@@ -124,6 +127,23 @@ export function parseSvgPalette(text) {
               if (h) merged[k] = h;
             }
             if (STRUCTURAL_KEYS.some(k => merged[k])) out.structural = merged;
+          }
+          if (meta.advancedEnabled === true && Array.isArray(meta.advancedColors) && meta.advancedColors.length >= 3) {
+            const ac = DEFAULTS_ADVANCED.slice();
+            for (let i = 0; i < 3; i++) {
+              const h = toFullHex(meta.advancedColors[i]);
+              if (h) ac[i] = h;
+            }
+            out.advancedEnabled = true;
+            out.advancedColors = ac;
+            const at = DEFAULTS_ADVANCED_TRANSPARENCY_PCT.slice();
+            if (Array.isArray(meta.advancedTransparencyPct) && meta.advancedTransparencyPct.length >= 2) {
+              for (let j = 0; j < 2; j++) {
+                const n = Math.round(Number(meta.advancedTransparencyPct[j]));
+                if (Number.isFinite(n)) at[j] = Math.max(0, Math.min(100, n));
+              }
+            }
+            out.advancedTransparencyPct = at;
           }
           return out;
         }
@@ -346,10 +366,32 @@ export function createImportExport(refs, getUi, themesApi) {
           mergeStructuralColorsFromThemeJsonObjects(structuralSources);
         state.structuralEnabled = anyStructural;
         if (anyStructural) state.structuralColors = mergedStructural;
+
+        const advancedSources = [
+          maybeObj(data),
+          maybeObj(data.theme),
+          maybeObj(data.reportTheme)
+        ];
+        if (Array.isArray(data.themes)) {
+          for (const t of data.themes) {
+            const th = maybeObj(t);
+            if (th) advancedSources.push(th);
+          }
+        }
+        const adv = mergeAdvancedColorsFromThemeJsonObjects(advancedSources);
+        if (adv.found) {
+          state.advancedEnabled = true;
+          state.advancedColors = adv.advancedColors;
+          state.advancedTransparencyPct = adv.advancedTransparencyPct;
+        } else {
+          state.advancedEnabled = false;
+        }
+
         ui.updateOptionalSectionsVisibility();
         ui.renderSentimentSwatches();
         ui.renderDivergentSwatches();
         ui.renderStructuralSwatches();
+        ui.renderAdvancedSwatches();
         saveState();
         replaceHashFromStateNow();
         updateThemeStatus();
@@ -447,9 +489,34 @@ export function createImportExport(refs, getUi, themesApi) {
           } else {
             state.structuralEnabled = false;
           }
+          if (parsed.advancedEnabled === true && Array.isArray(parsed.advancedColors) && parsed.advancedColors.length >= 3) {
+            state.advancedEnabled = true;
+            state.advancedColors = DEFAULTS_ADVANCED.slice();
+            for (let i = 0; i < 3; i++) {
+              const h = toFullHex(parsed.advancedColors[i]);
+              if (h) state.advancedColors[i] = h;
+            }
+            state.advancedTransparencyPct = DEFAULTS_ADVANCED_TRANSPARENCY_PCT.slice();
+            if (Array.isArray(parsed.advancedTransparencyPct) && parsed.advancedTransparencyPct.length >= 2) {
+              for (let j = 0; j < 2; j++) {
+                const n = Math.round(Number(parsed.advancedTransparencyPct[j]));
+                if (Number.isFinite(n)) state.advancedTransparencyPct[j] = Math.max(0, Math.min(100, n));
+              }
+            }
+          } else {
+            const advFromStyles = mergeAdvancedColorsFromThemeJsonObjects([parsed]);
+            if (advFromStyles.found) {
+              state.advancedEnabled = true;
+              state.advancedColors = advFromStyles.advancedColors;
+              state.advancedTransparencyPct = advFromStyles.advancedTransparencyPct;
+            } else {
+              state.advancedEnabled = false;
+            }
+          }
           ui.renderSentimentSwatches();
           ui.renderDivergentSwatches();
           ui.renderStructuralSwatches();
+          ui.renderAdvancedSwatches();
           ui.updateOptionalSectionsVisibility();
           saveState();
           replaceHashFromStateNow();

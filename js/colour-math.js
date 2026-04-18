@@ -29,6 +29,19 @@ export function rgbToHex(r, g, b) {
   return '#' + to2(r) + to2(g) + to2(b);
 }
 
+/**
+ * @param {string} hex
+ * @param {number} alpha 0 (transparent) .. 1 (opaque)
+ * @returns {string} `rgba(r,g,b,a)`
+ */
+export function hexToRgbaCss(hex, alpha) {
+  const full = toFullHex(hex);
+  const a = Math.max(0, Math.min(1, Number(alpha) || 0));
+  if (!full) return `rgba(0,0,0,${a})`;
+  const { r, g, b } = hexToRgb(full);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
 export function rgbToCmyk(r, g, b) {
   r = Math.max(0, Math.min(255, Math.round(r)));
   g = Math.max(0, Math.min(255, Math.round(g)));

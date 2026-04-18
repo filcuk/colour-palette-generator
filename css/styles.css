@@ -221,7 +221,7 @@ h1 {
 }
 
 .pbi-nav {
-  flex: 0 0 clamp(128px, 24%, 220px);
+  flex: 0 0 clamp(128px, 18%, 220px);
   display: flex;
   flex-direction: column;
   gap: var(--pbi-layout-gap, 10px);
@@ -387,7 +387,7 @@ h1 {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--pbi-fg);
+  color: var(--pbi-title-text, var(--pbi-fg));
 }
 
 .pbi-cards {
@@ -762,6 +762,39 @@ h1 {
   margin: 0;
 }
 
+.advanced-transparency-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap);
+  align-items: start;
+  margin-top: 10px;
+  width: 100%;
+}
+.advanced-transparency-cell--spacer {
+  pointer-events: none;
+}
+.advanced-transparency-slider {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-top: 0;
+}
+.advanced-transparency-slider label {
+  flex: 1 1 100%;
+  font-size: 13px;
+  color: #444;
+}
+.advanced-transparency-slider input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 80px;
+}
+.advanced-transparency-slider output {
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5em;
+  text-align: right;
+}
+
 hr.colours-picker-divider {
   border: 0;
   border-top: 1px solid rgba(0, 0, 0, 0.12);
@@ -850,7 +883,8 @@ hr.colours-picker-divider {
 /* Optional rows (no B/W contrast strip): symmetric padding, hex centred in the square. */
 .swatch-wrap[data-section="sentiment"] .swatch-input,
 .swatch-wrap[data-section="divergent"] .swatch-input,
-.swatch-wrap[data-section="structural"] .swatch-input {
+.swatch-wrap[data-section="structural"] .swatch-input,
+.swatch-wrap[data-section="advanced"] .swatch-input {
   padding: 0 6px;
   display: flex;
   align-items: center;

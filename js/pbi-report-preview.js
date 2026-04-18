@@ -1,4 +1,5 @@
-import { state, getThemeColorsFromState, getSentimentColorsResolved, getDivergentColorsResolved } from './state.js';
+import { state, getThemeColorsFromState, getSentimentColorsResolved, getDivergentColorsResolved, DEFAULTS_ADVANCED, DEFAULTS_ADVANCED_TRANSPARENCY_PCT } from './state.js';
+import { hexToRgbaCss, toFullHex } from './colour-math.js';
 import { getStructuralColorsResolved } from './colour-export.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -437,8 +438,22 @@ export function refreshPbiReportPreview(root) {
   const s = getStructuralColorsResolved(state);
   const [firstLevel, secondLevel, thirdLevel, fourthLevel, pageBg, secondaryBg] = s;
 
-  root.style.setProperty('--pbi-page-bg', pageBg);
-  root.style.setProperty('--pbi-card-bg', secondaryBg);
+  if (state.advancedEnabled) {
+    const ac = (state.advancedColors || DEFAULTS_ADVANCED).slice(0, 3);
+    const at = (state.advancedTransparencyPct || DEFAULTS_ADVANCED_TRANSPARENCY_PCT).slice(0, 2);
+    const pageHex = toFullHex(ac[0]) || DEFAULTS_ADVANCED[0];
+    const visHex = toFullHex(ac[1]) || DEFAULTS_ADVANCED[1];
+    const titleHex = toFullHex(ac[2]) || DEFAULTS_ADVANCED[2];
+    const pageT = Math.max(0, Math.min(100, Number(at[0]) || 0));
+    const visT = Math.max(0, Math.min(100, Number(at[1]) || 0));
+    root.style.setProperty('--pbi-page-bg', hexToRgbaCss(pageHex, 1 - pageT / 100));
+    root.style.setProperty('--pbi-card-bg', hexToRgbaCss(visHex, 1 - visT / 100));
+    root.style.setProperty('--pbi-title-text', titleHex);
+  } else {
+    root.style.removeProperty('--pbi-title-text');
+    root.style.setProperty('--pbi-page-bg', pageBg);
+    root.style.setProperty('--pbi-card-bg', pageBg);
+  }
   root.style.setProperty('--pbi-fg', firstLevel);
   root.style.setProperty('--pbi-fg-secondary', secondLevel);
   root.style.setProperty('--pbi-fg-muted', thirdLevel);

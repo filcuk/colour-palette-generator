@@ -21,7 +21,9 @@ import {
   setAfterSaveStateHook,
   replaceHashFromStateNow,
   getDivergentColorsResolved,
-  migrateLegacyDivergentOrder
+  migrateLegacyDivergentOrder,
+  DEFAULTS_ADVANCED,
+  DEFAULTS_ADVANCED_TRANSPARENCY_PCT
 } from './state.js';
 
 export let savedThemes = [];
@@ -189,6 +191,13 @@ export function createThemesController(refs, getUi, io, opts = {}) {
       divergentEnabled: !!state.divergentEnabled,
       structuralColors: structural.slice(),
       structuralEnabled: !!state.structuralEnabled,
+      advancedEnabled: !!state.advancedEnabled,
+      advancedColors: (state.advancedColors || DEFAULTS_ADVANCED).slice(0, 3).map((c, i) => toFullHex(c) || DEFAULTS_ADVANCED[i]),
+      advancedTransparencyPct: (state.advancedTransparencyPct || DEFAULTS_ADVANCED_TRANSPARENCY_PCT).slice(0, 2).map((t, i) => {
+        const n = Math.round(Number(t));
+        const d = Number.isFinite(n) ? n : DEFAULTS_ADVANCED_TRANSPARENCY_PCT[i];
+        return Math.max(0, Math.min(100, d));
+      }),
       divergentNullEnabled: state.divergentNullEnabled !== false
     };
   }
@@ -315,9 +324,27 @@ export function createThemesController(refs, getUi, io, opts = {}) {
       }
     }
     state.structuralColors = nextStructural;
+    state.advancedEnabled = theme.advancedEnabled === true;
+    const nextAdv = DEFAULTS_ADVANCED.slice();
+    if (Array.isArray(theme.advancedColors) && theme.advancedColors.length >= 3) {
+      for (let i = 0; i < 3; i++) {
+        const h = toFullHex(theme.advancedColors[i]);
+        if (h) nextAdv[i] = h;
+      }
+    }
+    state.advancedColors = nextAdv;
+    const nextAt = DEFAULTS_ADVANCED_TRANSPARENCY_PCT.slice();
+    if (Array.isArray(theme.advancedTransparencyPct) && theme.advancedTransparencyPct.length >= 2) {
+      for (let i = 0; i < 2; i++) {
+        const n = Math.round(Number(theme.advancedTransparencyPct[i]));
+        if (Number.isFinite(n)) nextAt[i] = Math.max(0, Math.min(100, n));
+      }
+    }
+    state.advancedTransparencyPct = nextAt;
     ui.renderSentimentSwatches();
     ui.renderDivergentSwatches();
     ui.renderStructuralSwatches();
+    ui.renderAdvancedSwatches();
     ui.updateOptionalSectionsVisibility();
     suppressAutoThemeSave = false;
     activeSavedThemeIndex = savedThemes.findIndex(t => t === theme);
@@ -351,6 +378,9 @@ export function createThemesController(refs, getUi, io, opts = {}) {
       divergentEnabled: !!state.divergentEnabled,
       structuralColors: DEFAULTS_STRUCTURAL.slice(),
       structuralEnabled: false,
+      advancedColors: DEFAULTS_ADVANCED.slice(),
+      advancedTransparencyPct: DEFAULTS_ADVANCED_TRANSPARENCY_PCT.slice(),
+      advancedEnabled: false,
       divergentNullEnabled: true
     };
     savedThemes.push(payload);

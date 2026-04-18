@@ -42,9 +42,16 @@ const refs = {
   rowDivergentWrapEl: document.getElementById('rowDivergentWrap'),
   rowStructuralEl: document.getElementById('rowStructural'),
   rowStructuralWrapEl: document.getElementById('rowStructuralWrap'),
+  rowAdvancedEl: document.getElementById('rowAdvanced'),
+  rowAdvancedWrapEl: document.getElementById('rowAdvancedWrap'),
   sentimentEnabledCb: document.getElementById('sentimentEnabled'),
   divergentEnabledCb: document.getElementById('divergentEnabled'),
   structuralEnabledCb: document.getElementById('structuralEnabled'),
+  advancedEnabledCb: document.getElementById('advancedEnabled'),
+  advancedPageTransparencySlider: document.getElementById('advancedPageTransparencySlider'),
+  advancedVisualTransparencySlider: document.getElementById('advancedVisualTransparencySlider'),
+  advancedPageTransparencyValue: document.getElementById('advancedPageTransparencyValue'),
+  advancedVisualTransparencyValue: document.getElementById('advancedVisualTransparencyValue'),
   divergentNullEnabledCb: document.getElementById('divergentNullEnabled'),
   countSlider: document.getElementById('countSlider'),
   countValue: document.getElementById('countValue'),
@@ -102,6 +109,7 @@ function runResetAndReseed() {
   ui.renderSentimentSwatches();
   ui.renderDivergentSwatches();
   ui.renderStructuralSwatches();
+  ui.renderAdvancedSwatches();
   ui.updateOptionalSectionsVisibility();
   ui.setActive('theme', 0);
   themes.ensureInitialThemeIfEmpty();
@@ -165,6 +173,7 @@ ui.setCount(state.count);
 ui.renderSentimentSwatches();
 ui.renderDivergentSwatches();
 ui.renderStructuralSwatches();
+ui.renderAdvancedSwatches();
 ui.updateOptionalSectionsVisibility();
 ui.setActive('theme', 0);
 const pickerSetSelect = document.getElementById('pickerSetSelect');

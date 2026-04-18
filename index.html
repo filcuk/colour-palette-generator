@@ -121,6 +121,34 @@
             <div class="row row-fixed" id="rowStructural" role="group" aria-label="Structural color swatches"></div>
           </div>
         </div>
+        <div class="colour-block" id="blockAdvanced">
+          <label class="colour-block-heading">
+            <span class="colour-block-title">Advanced colours</span>
+            <input type="checkbox" id="advancedEnabled" class="toggle-checkbox"
+              aria-label="Toggle Advanced colours" />
+            <span class="toggle-icon" aria-hidden="true"></span>
+          </label>
+          <div class="optional-content" id="rowAdvancedWrap">
+            <div class="row row-fixed" id="rowAdvanced" role="group" aria-label="Advanced color swatches"></div>
+            <div class="advanced-transparency-grid" aria-label="Background transparency">
+              <div class="advanced-transparency-cell">
+                <div class="slider-wrap advanced-transparency-slider" title="0% = opaque, 100% = fully transparent">
+                  <label for="advancedPageTransparencySlider">Page background transparency</label>
+                  <input id="advancedPageTransparencySlider" type="range" min="0" max="100" value="14" />
+                  <output id="advancedPageTransparencyValue" for="advancedPageTransparencySlider">14%</output>
+                </div>
+              </div>
+              <div class="advanced-transparency-cell">
+                <div class="slider-wrap advanced-transparency-slider" title="0% = opaque, 100% = fully transparent">
+                  <label for="advancedVisualTransparencySlider">Visual background transparency</label>
+                  <input id="advancedVisualTransparencySlider" type="range" min="0" max="100" value="0" />
+                  <output id="advancedVisualTransparencyValue" for="advancedVisualTransparencySlider">0%</output>
+                </div>
+              </div>
+              <div class="advanced-transparency-cell advanced-transparency-cell--spacer" aria-hidden="true"></div>
+            </div>
+          </div>
+        </div>
         <hr class="colours-picker-divider" aria-hidden="true" />
         <div class="picker-panel preview-panel" id="pickerPanel">
           <div class="picker">
@@ -248,12 +276,12 @@
                 <div class="pbi-cards" role="list">
                   <div class="pbi-card" role="listitem">
                     <span class="pbi-card-label">Sales</span>
-                    <span class="pbi-card-value">$1.2M</span>
+                    <span class="pbi-card-value">£1.2M</span>
                     <span class="pbi-card-delta pbi-card-delta--up">▲ 4.2%</span>
                   </div>
                   <div class="pbi-card" role="listitem">
                     <span class="pbi-card-label">Revenue</span>
-                    <span class="pbi-card-value">$892K</span>
+                    <span class="pbi-card-value">£892K</span>
                     <span class="pbi-card-delta pbi-card-delta--up">▲ 1.8%</span>
                   </div>
                   <div class="pbi-card" role="listitem">
@@ -311,7 +339,7 @@
 
   <footer class="page-footer">
     <a href="https://github.com/filcuk/pbi-theme-customiser" target="_blank" rel="noopener noreferrer">Power BI Theme
-      Customiser</a> v0.5.0 on GitHub • <a href="https://github.com/filcuk/pbi-theme-customiser/issues" target="_blank"
+      Customiser</a> v0.6.0 on GitHub • <a href="https://github.com/filcuk/pbi-theme-customiser/issues" target="_blank"
       rel="noopener noreferrer">Submit Issues or Ideas</a>
   </footer>
 

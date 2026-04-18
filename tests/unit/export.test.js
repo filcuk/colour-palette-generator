@@ -7,7 +7,10 @@ import {
   DEFAULTS_SENTIMENT,
   DEFAULTS_DIVERGENT,
   DEFAULTS_STRUCTURAL,
+  DEFAULTS_ADVANCED,
+  DEFAULTS_ADVANCED_TRANSPARENCY_PCT,
   mergeStructuralColorsFromThemeJsonObjects,
+  mergeAdvancedColorsFromThemeJsonObjects,
   STRUCTURAL_KEYS
 } from '../../js/colour-export.js';
 
@@ -22,6 +25,9 @@ function minimalState(overrides = {}) {
     divergentEnabled: false,
     structuralEnabled: false,
     structuralColors: DEFAULTS_STRUCTURAL.slice(),
+    advancedEnabled: false,
+    advancedColors: DEFAULTS_ADVANCED.slice(),
+    advancedTransparencyPct: DEFAULTS_ADVANCED_TRANSPARENCY_PCT.slice(),
     ...overrides
   };
 }
@@ -79,6 +85,27 @@ describe('buildThemeJsonPayloadFromState', () => {
     expect(p).not.toHaveProperty('firstLevelElements');
   });
 
+  it('includes textClasses and visualStyles when advanced section is enabled', () => {
+    const p = buildThemeJsonPayloadFromState(
+      minimalState({
+        advancedEnabled: true,
+        advancedColors: ['#00CCFF', '#FF0000', '#FF00E1'],
+        advancedTransparencyPct: [42, 4]
+      })
+    );
+    expect(p.textClasses).toEqual({ title: { color: '#FF00E1' } });
+    expect(p.visualStyles.page['*'].background[0].transparency).toBe(42);
+    expect(p.visualStyles.page['*'].background[0].color.solid.color).toBe('#00CCFF');
+    expect(p.visualStyles['*']['*'].background[0].transparency).toBe(4);
+    expect(p.visualStyles['*']['*'].background[0].color.solid.color).toBe('#FF0000');
+  });
+
+  it('omits textClasses and visualStyles when advanced section is disabled', () => {
+    const p = buildThemeJsonPayloadFromState(minimalState());
+    expect(p).not.toHaveProperty('textClasses');
+    expect(p).not.toHaveProperty('visualStyles');
+  });
+
   it('omits null key when divergent null is disabled', () => {
     const p = buildThemeJsonPayloadFromState(
       minimalState({ divergentEnabled: true, divergentNullEnabled: false })
@@ -87,6 +114,42 @@ describe('buildThemeJsonPayloadFromState', () => {
     expect(p.center).toBeDefined();
     expect(p.minimum).toBeDefined();
     expect(p).not.toHaveProperty('null');
+  });
+});
+
+describe('mergeAdvancedColorsFromThemeJsonObjects', () => {
+  it('reads page, default visual, and title from Power BI theme JSON shape', () => {
+    const theme = {
+      textClasses: {
+        title: { color: '#FF00E1' }
+      },
+      visualStyles: {
+        '*': {
+          '*': {
+            background: [
+              {
+                color: { solid: { color: '#FF0000' } },
+                transparency: 4
+              }
+            ]
+          }
+        },
+        page: {
+          '*': {
+            background: [
+              {
+                color: { solid: { color: '#00CCFF' } },
+                transparency: 42
+              }
+            ]
+          }
+        }
+      }
+    };
+    const r = mergeAdvancedColorsFromThemeJsonObjects([theme]);
+    expect(r.found).toBe(true);
+    expect(r.advancedColors).toEqual(['#00CCFF', '#FF0000', '#FF00E1']);
+    expect(r.advancedTransparencyPct).toEqual([42, 4]);
   });
 });
 
@@ -131,7 +194,7 @@ describe('buildExportSvgString', () => {
     expect(metaMatch).toBeTruthy();
     const meta = JSON.parse(metaMatch[1]);
     expect(meta.app).toBe('colour-palette');
-    expect(meta.version).toBe(8);
+    expect(meta.version).toBe(9);
     expect(meta.colors).toEqual(themeColors);
     expect(meta.name).toBe('Unit');
   });

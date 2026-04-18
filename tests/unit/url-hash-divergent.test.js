@@ -92,6 +92,21 @@ describe('URL hash divergent colours', () => {
     expect(state.divergentNullEnabled).toBe(false);
   });
 
+  it('round-trips advanced colours when ade is set', () => {
+    const p = {
+      n: '',
+      c: 8,
+      d: Array.from({ length: 16 }, (_, i) => '112233'),
+      ade: true,
+      adc: ['FAFAFA', 'FFFFFF', 'ABCDEF'],
+      adt: [14, 0]
+    };
+    const s = hashPayloadToStoredShape(decodeHashPayload(encodeHashPayload(p)));
+    expect(s.advancedEnabled).toBe(true);
+    expect(s.advancedColors.map(c => c.toUpperCase())).toEqual(['#FAFAFA', '#FFFFFF', '#ABCDEF']);
+    expect(s.advancedTransparencyPct).toEqual([14, 0]);
+  });
+
   it('round-trips structural colours when ste is set', () => {
     const stc = DEFAULTS_STRUCTURAL.map(c => c.replace(/^#/, '').toUpperCase());
     const p = {

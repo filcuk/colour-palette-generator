@@ -10,7 +10,13 @@ import {
   hsvToHex,
   hexToHsv
 } from './colour-math.js';
-import { state, saveState, mergeStoredIntoState } from './state.js';
+import {
+  state,
+  saveState,
+  mergeStoredIntoState,
+  DEFAULTS_ADVANCED,
+  DEFAULTS_ADVANCED_TRANSPARENCY_PCT
+} from './state.js';
 
 /** One-line hints for Power BI structural colours (hover); see MS “Set structural colors”. */
 const STRUCTURAL_SWATCH_HELP = [
@@ -31,12 +37,19 @@ export function initUi(refs, themesApi, ioApi) {
     rowSentimentEl,
     rowDivergentEl,
     rowStructuralEl,
+    rowAdvancedEl,
     rowSentimentWrapEl,
     rowDivergentWrapEl,
     rowStructuralWrapEl,
+    rowAdvancedWrapEl,
     sentimentEnabledCb,
     divergentEnabledCb,
     structuralEnabledCb,
+    advancedEnabledCb,
+    advancedPageTransparencySlider,
+    advancedVisualTransparencySlider,
+    advancedPageTransparencyValue,
+    advancedVisualTransparencyValue,
     divergentNullEnabledCb,
     countSlider,
     countValue,
@@ -62,6 +75,7 @@ let wraps = [], inputs = [], badgesWraps = [];
 let sentimentWraps = [], sentimentInputs = [], sentimentBadgesWraps = [];
 let divergentWraps = [], divergentInputs = [], divergentBadgesWraps = [];
 let structuralWraps = [], structuralInputs = [], structuralBadgesWraps = [];
+let advancedWraps = [], advancedInputs = [], advancedBadgesWraps = [];
 let ph = 0, ps = 1, pv = 1; // picker HSV
 // ========= Rendering =========
 function escapeHtml(s) {
@@ -229,11 +243,39 @@ function renderStructuralSwatches() {
   updateActiveClass();
 }
 
+function updateAdvancedTransparencyUiFromState() {
+  const at = (state.advancedTransparencyPct || DEFAULTS_ADVANCED_TRANSPARENCY_PCT).slice(0, 2);
+  const p0 = Math.max(0, Math.min(100, Math.round(Number(at[0]) || 0)));
+  const p1 = Math.max(0, Math.min(100, Math.round(Number(at[1]) || 0)));
+  if (advancedPageTransparencySlider) advancedPageTransparencySlider.value = String(p0);
+  if (advancedVisualTransparencySlider) advancedVisualTransparencySlider.value = String(p1);
+  if (advancedPageTransparencyValue) advancedPageTransparencyValue.textContent = `${p0}%`;
+  if (advancedVisualTransparencyValue) advancedVisualTransparencyValue.textContent = `${p1}%`;
+}
+
+function renderAdvancedSwatches() {
+  if (!rowAdvancedEl) return;
+  const labels = ['Page background', 'Visual background', 'Title text'];
+  let html = '';
+  for (let i = 0; i < 3; i++) {
+    const val = toFullHex(state.advancedColors[i]) || '';
+    html += swatchHTML('advanced', i, val, labels[i], labels[i], false);
+  }
+  rowAdvancedEl.innerHTML = html;
+  advancedWraps = Array.from(rowAdvancedEl.querySelectorAll('.swatch-wrap'));
+  advancedInputs = advancedWraps.map(w => w.querySelector('.swatch-input'));
+  advancedBadgesWraps = advancedWraps.map(() => null);
+  bindSwatchInputs(advancedWraps, advancedInputs, advancedBadgesWraps, 'advanced', state.advancedColors);
+  updateAdvancedTransparencyUiFromState();
+  updateActiveClass();
+}
+
 function getActiveInput() {
   if (state.activeSection === 'theme') return inputs[state.activeIndex];
   if (state.activeSection === 'sentiment') return sentimentInputs ? sentimentInputs[state.activeIndex] : null;
   if (state.activeSection === 'divergent') return divergentInputs ? divergentInputs[state.activeIndex] : null;
   if (state.activeSection === 'structural') return structuralInputs ? structuralInputs[state.activeIndex] : null;
+  if (state.activeSection === 'advanced') return advancedInputs ? advancedInputs[state.activeIndex] : null;
   return null;
 }
 function getActiveBadgesWrap() {
@@ -241,6 +283,7 @@ function getActiveBadgesWrap() {
   if (state.activeSection === 'sentiment') return sentimentBadgesWraps ? sentimentBadgesWraps[state.activeIndex] : null;
   if (state.activeSection === 'divergent') return divergentBadgesWraps ? divergentBadgesWraps[state.activeIndex] : null;
   if (state.activeSection === 'structural') return structuralBadgesWraps ? structuralBadgesWraps[state.activeIndex] : null;
+  if (state.activeSection === 'advanced') return advancedBadgesWraps ? advancedBadgesWraps[state.activeIndex] : null;
   return null;
 }
 function getActiveStateArray() {
@@ -248,6 +291,7 @@ function getActiveStateArray() {
   if (state.activeSection === 'sentiment') return state.sentimentColors;
   if (state.activeSection === 'divergent') return state.divergentColors;
   if (state.activeSection === 'structural') return state.structuralColors;
+  if (state.activeSection === 'advanced') return state.advancedColors;
   return state.colors;
 }
 
@@ -256,7 +300,8 @@ function updateActiveClass() {
     ...(wraps || []),
     ...(sentimentWraps || []),
     ...(divergentWraps || []),
-    ...(structuralWraps || [])
+    ...(structuralWraps || []),
+    ...(advancedWraps || [])
   ];
   allWraps.forEach(w => {
     if (!w) return;
@@ -276,7 +321,9 @@ function setActive(section, index) {
           : 2
         : section === 'structural'
           ? 6
-          : 2;
+          : section === 'advanced'
+            ? 2
+            : 2;
   const i = Math.max(0, Math.min(maxIdx, index));
   state.activeSection = section;
   state.activeIndex = i;
@@ -334,7 +381,11 @@ function applyPreview(input, contrastEl) {
         ? state.sentimentColors
         : section === 'divergent'
           ? state.divergentColors
-          : state.structuralColors;
+          : section === 'structural'
+            ? state.structuralColors
+            : section === 'advanced'
+              ? state.advancedColors
+              : state.colors;
   const hex = toPreviewableHex(input.value || '');
 
   if (hex) {
@@ -371,13 +422,16 @@ function updateOptionalSectionsVisibility() {
   if (sentimentEnabledCb) sentimentEnabledCb.checked = !!state.sentimentEnabled;
   if (divergentEnabledCb) divergentEnabledCb.checked = !!state.divergentEnabled;
   if (structuralEnabledCb) structuralEnabledCb.checked = !!state.structuralEnabled;
+  if (advancedEnabledCb) advancedEnabledCb.checked = !!state.advancedEnabled;
   if (divergentNullEnabledCb) divergentNullEnabledCb.checked = state.divergentNullEnabled !== false;
   if (rowSentimentWrapEl) rowSentimentWrapEl.classList.toggle('optional-hidden', !state.sentimentEnabled);
   if (rowDivergentWrapEl) rowDivergentWrapEl.classList.toggle('optional-hidden', !state.divergentEnabled);
   if (rowStructuralWrapEl) rowStructuralWrapEl.classList.toggle('optional-hidden', !state.structuralEnabled);
+  if (rowAdvancedWrapEl) rowAdvancedWrapEl.classList.toggle('optional-hidden', !state.advancedEnabled);
   if (state.activeSection === 'sentiment' && !state.sentimentEnabled) setActive('theme', 0);
   if (state.activeSection === 'divergent' && !state.divergentEnabled) setActive('theme', 0);
   if (state.activeSection === 'structural' && !state.structuralEnabled) setActive('theme', 0);
+  if (state.activeSection === 'advanced' && !state.advancedEnabled) setActive('theme', 0);
   if (state.activeSection === 'divergent' && state.divergentNullEnabled === false && state.activeIndex > 2) {
     setActive('divergent', 2);
   }
@@ -429,6 +483,35 @@ if (structuralEnabledCb) {
     ioApi.updateSvgPreview();
   });
 }
+if (advancedEnabledCb) {
+  advancedEnabledCb.addEventListener('change', () => {
+    state.advancedEnabled = advancedEnabledCb.checked;
+    updateOptionalSectionsVisibility();
+    saveState();
+    ioApi.updateJsonPreview();
+    ioApi.updateSvgPreview();
+  });
+}
+function onAdvancedTransparencyInput(which, rawVal) {
+  const n = Math.max(0, Math.min(100, Math.round(parseInt(rawVal, 10) || 0)));
+  if (!state.advancedTransparencyPct || state.advancedTransparencyPct.length < 2) {
+    state.advancedTransparencyPct = DEFAULTS_ADVANCED_TRANSPARENCY_PCT.slice();
+  }
+  state.advancedTransparencyPct[which] = n;
+  updateAdvancedTransparencyUiFromState();
+  themesApi.markThemeDirty();
+  saveState();
+  ioApi.updateJsonPreview();
+  ioApi.updateSvgPreview();
+}
+if (advancedPageTransparencySlider) {
+  advancedPageTransparencySlider.addEventListener('input', e =>
+    onAdvancedTransparencyInput(0, e.target.value));
+}
+if (advancedVisualTransparencySlider) {
+  advancedVisualTransparencySlider.addEventListener('input', e =>
+    onAdvancedTransparencyInput(1, e.target.value));
+}
 if (divergentNullEnabledCb) {
   divergentNullEnabledCb.addEventListener('change', () => {
     state.divergentNullEnabled = divergentNullEnabledCb.checked;
@@ -462,6 +545,9 @@ if (typeof normalizeBtn !== 'undefined' && normalizeBtn) {
     }
     if (state.structuralEnabled && structuralInputs) {
       structuralInputs.forEach((inp, i) => { normalizeInput(inp, structuralBadgesWraps[i]); });
+    }
+    if (state.advancedEnabled && advancedInputs) {
+      advancedInputs.forEach((inp, i) => { normalizeInput(inp, advancedBadgesWraps[i]); });
     }
     saveState();
   });
@@ -782,6 +868,7 @@ if (pickerShadesEl) {
     renderSentimentSwatches();
     renderDivergentSwatches();
     renderStructuralSwatches();
+    renderAdvancedSwatches();
     updateOptionalSectionsVisibility();
     setActive('theme', 0);
     themesApi.updateThemeStatus();
@@ -798,6 +885,7 @@ if (pickerShadesEl) {
     renderSentimentSwatches,
     renderDivergentSwatches,
     renderStructuralSwatches,
+    renderAdvancedSwatches,
     updateOptionalSectionsVisibility,
     setActive,
     applyStoredState,
