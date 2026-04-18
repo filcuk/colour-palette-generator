@@ -49,7 +49,24 @@ function renderPbiProductSlicerList(root) {
   }
 }
 
-/** Demo treemap tiles: areas approximate relative weight; one tile uses divergent null. */
+/**
+ * Grid line span like `1 / 8` → 7 tracks (inclusive start, exclusive end in CSS grid terms).
+ * @param {string} spec
+ */
+function pbiTreemapGridSpan(spec) {
+  const parts = String(spec || '')
+    .split('/')
+    .map(s => parseInt(s.trim(), 10));
+  if (parts.length !== 2 || parts.some(n => Number.isNaN(n))) return 1;
+  return Math.max(1, parts[1] - parts[0]);
+}
+
+/** Relative tile weight = column span × row span on the 12×10 demo treemap grid. */
+function pbiTreemapCellArea(cell) {
+  return pbiTreemapGridSpan(cell.gridColumn) * pbiTreemapGridSpan(cell.gridRow);
+}
+
+/** Demo treemap tiles: areas decrease visually (largest top-left); one tile uses divergent null. */
 const PBI_TREEMAP_CELLS = [
   { label: 'Enterprise', gridColumn: '1 / 8', gridRow: '1 / 8' },
   { label: 'SMB', gridColumn: '8 / 12', gridRow: '1 / 5' },
@@ -120,11 +137,23 @@ function renderPbiTreemap(slot, palette) {
   const inner = document.createElement('div');
   inner.className = 'pbi-treemap-inner';
 
-  const dataLabels = PBI_TREEMAP_CELLS.filter(c => !c.null).map(c => c.label);
-  const sorted = [...dataLabels].sort((a, b) => a.localeCompare(b));
-  const tByLabel = divergentTByEvenSpread(sorted);
+  /** Smallest area → divergent minimum (t = -1); largest → maximum (t = +1). */
+  const valued = PBI_TREEMAP_CELLS.filter(c => !c.null);
+  const sortedByAreaAsc = [...valued].sort((a, b) => {
+    const da = pbiTreemapCellArea(a);
+    const db = pbiTreemapCellArea(b);
+    if (da !== db) return da - db;
+    return a.label.localeCompare(b.label);
+  });
+  const tByLabel = divergentTByEvenSpread(sortedByAreaAsc.map(c => c.label));
 
-  for (const cell of PBI_TREEMAP_CELLS) {
+  /** DOM / paint order: largest tiles first (reading order matches size rank). */
+  const renderOrder = [...PBI_TREEMAP_CELLS].sort((a, b) => {
+    if (!!a.null !== !!b.null) return a.null ? 1 : -1;
+    return pbiTreemapCellArea(b) - pbiTreemapCellArea(a);
+  });
+
+  for (const cell of renderOrder) {
     const el = document.createElement('div');
     el.className = 'pbi-treemap-cell';
     el.style.gridColumn = cell.gridColumn;
@@ -460,9 +489,9 @@ export function refreshPbiReportPreview(root) {
   root.style.setProperty('--pbi-border', fourthLevel);
   root.style.setProperty('--pbi-accent', theme[0] || '#118DFF');
   /* Chart chrome vs structural keys (MS Learn: thirdLevel≈gridlines, fourth≈axis/frame, second≈axis labels, first≈data labels) */
-  root.style.setProperty('--pbi-struct-grid', thirdLevel);
+  root.style.setProperty('--pbi-struct-grid', '#f0f0f0');
   root.style.setProperty('--pbi-struct-axis', fourthLevel);
-  root.style.setProperty('--pbi-struct-axis-label', secondLevel);
+  root.style.setProperty('--pbi-struct-axis-label', thirdLevel);
   root.style.setProperty('--pbi-struct-data-label', firstLevel);
 
   const [sentGood, sentNeutral, sentBad] = getSentimentColorsResolved();

@@ -475,7 +475,7 @@ h1 {
 
 .pbi-chart-axis-line {
   stroke: var(--pbi-struct-axis, var(--pbi-border));
-  stroke-width: 1;
+  stroke-width: 0;  /* Disable axis lines */
 }
 
 .pbi-chart-connector {

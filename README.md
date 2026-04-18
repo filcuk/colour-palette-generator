@@ -6,7 +6,11 @@
 > [!IMPORTANT]
 > This project is almost entirely vibe-coded.
 
-A theme/colour palette generator, predominantly for use in [MS Power BI](https://www.microsoft.com/en-us/power-platform/products/power-bi).
+A theme/colour palette generator, predominantly for use in [MS Power BI](https://www.microsoft.com/en-us/power-platform/products/power-bi).#
+
+> [!TIP]
+> How is this different from other Power BI theme editors?
+> I'm focusing on the middle ground: make it as simple as possible to define a theme, but provide relatively detailed customisation and advanced editing tools.
 
 ## Features
 - **🧮 Variable colour count**: pick how many theme colours you need
