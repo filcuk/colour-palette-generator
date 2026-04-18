@@ -43,6 +43,7 @@
       </details>
       <section class="page-section" aria-labelledby="section-themes">
         <h2 id="section-themes">Themes</h2>
+        <p class="callout-warning" style="margin-top:10px; margin-bottom:0;">Themes are stored in this browser. Clearing site data will remove all stored themes.</p>
         <div class="controls" style="margin-top:10px;">
           <div class="themes-manager" title="Name your theme or pick a saved one; used for export and stored in SVG">
             <div class="theme-combo">
@@ -64,8 +65,6 @@
               title="Clear all stored themes and reset palette">Reset</button>
           </div>
         </div>
-        <p class="callout-warning" style="margin-top:10px; margin-bottom:0;">Themes are stored in this browser. Clearing
-          site data or using a different browser will remove all stored themes.</p>
       </section>
 
       <section class="page-section page-section--colours" aria-labelledby="section-colours" id="coloursSection">
@@ -226,7 +225,6 @@
     <div class="app-layout-preview" id="appLayoutPreview">
       <aside id="coloursPreviewPanel" class="colours-preview-panel" aria-labelledby="colours-preview-heading"
         aria-hidden="true">
-        <h3 id="colours-preview-heading" class="colours-preview-panel-title">Report preview</h3>
         <div class="colours-preview-panel-body">
           <div class="pbi-report-preview" id="pbiReportPreview" aria-label="Simulated Power BI report using current theme colours">
             <div class="pbi-report">
@@ -234,19 +232,19 @@
                 <div class="pbi-nav-title">Filters</div>
                 <div class="pbi-slicer">
                   <span class="pbi-slicer-label">Date</span>
-                  <div class="pbi-slicer-box">Jan 2024 – Mar 2026</div>
+                  <div class="pbi-slicer-box" id="pbiSlicerDateRange"></div>
                 </div>
                 <div class="pbi-slicer">
                   <span class="pbi-slicer-label">Region</span>
                   <div class="pbi-slicer-box">All</div>
                 </div>
                 <div class="pbi-slicer">
-                  <span class="pbi-slicer-label">Category</span>
-                  <div class="pbi-slicer-box">Electronics, Home</div>
+                  <span class="pbi-slicer-label">Product</span>
+                  <div class="pbi-slicer-list" id="pbiSlicerProductList" role="group" aria-label="Product"></div>
                 </div>
               </nav>
               <div class="pbi-main">
-                <header class="pbi-title">Sales performance</header>
+                <header class="pbi-title">Report Preview</header>
                 <div class="pbi-cards" role="list">
                   <div class="pbi-card" role="listitem">
                     <span class="pbi-card-label">Sales</span>
@@ -271,22 +269,22 @@
                 </div>
                 <div class="pbi-chart-stack pbi-chart-stack--left" aria-hidden="true">
                   <div class="pbi-bar-chart pbi-visual">
-                    <div class="pbi-visual-title">Sales by month</div>
+                    <div class="pbi-visual-title">Sales by Product</div>
                     <div class="pbi-bar-area" id="pbiBarArea" aria-hidden="true"></div>
                   </div>
                   <div class="pbi-waterfall-chart pbi-visual">
-                    <div class="pbi-visual-title">Profit &amp; loss (waterfall)</div>
-                    <svg class="pbi-waterfall-svg" id="pbiWaterfallSvg" viewBox="0 0 260 90" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+                    <div class="pbi-visual-title">Profit &amp; Loss</div>
+                    <svg class="pbi-waterfall-svg" id="pbiWaterfallSvg" viewBox="0 0 260 118" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
                   </div>
                 </div>
                 <div class="pbi-chart-stack pbi-chart-stack--right" aria-hidden="true">
                   <div class="pbi-treemap-chart pbi-visual">
-                    <div class="pbi-visual-title">Sales by category (treemap)</div>
+                    <div class="pbi-visual-title">Profit by Sector</div>
                     <div class="pbi-treemap-slot" id="pbiTreemapSlot" aria-hidden="true"></div>
                   </div>
                   <div class="pbi-table-wrap pbi-visual">
-                    <div class="pbi-visual-title">Top products</div>
-                    <table class="pbi-table">
+                    <div class="pbi-visual-title">Top Products</div>
+                    <table class="pbi-table" id="pbiProductTable">
                       <thead>
                         <tr>
                           <th>Product</th>

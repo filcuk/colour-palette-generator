@@ -255,6 +255,50 @@ h1 {
   border-left: 3px solid var(--pbi-accent);
 }
 
+/* Vertical checkbox-style slicer (matches products in #pbiProductTable) */
+.pbi-slicer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 148px;
+  overflow-y: auto;
+  padding: 4px 4px 4px 2px;
+  font-size: 11px;
+  color: var(--pbi-fg);
+  background: var(--pbi-card-bg);
+  border: 1px solid var(--pbi-border);
+  border-radius: 4px;
+  border-left: 3px solid var(--pbi-accent);
+}
+
+.pbi-slicer-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  margin: 0;
+  border-radius: 3px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pbi-slicer-check:hover {
+  background: color-mix(in srgb, var(--pbi-accent) 10%, transparent);
+}
+
+.pbi-slicer-check input[type='checkbox'] {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--pbi-accent);
+}
+
+.pbi-slicer-check span {
+  min-width: 0;
+  line-height: 1.25;
+}
+
 .pbi-main {
   flex: 1 1 auto;
   min-width: 0;
@@ -408,26 +452,57 @@ h1 {
 .pbi-bar-area {
   flex: 1 1 auto;
   display: flex;
-  align-items: flex-end;
-  justify-content: space-around;
-  gap: var(--pbi-layout-gap, 10px);
-  min-height: 72px;
-  padding: 2px 2px 0;
-  border-bottom: 1px solid var(--pbi-border);
+  flex-direction: column;
+  min-height: 88px;
+  min-width: 0;
+  padding: 0;
 }
 
-.pbi-bar {
-  flex: 1;
-  max-width: 28px;
-  height: var(--h, 50%);
-  background: var(--bc, var(--pbi-accent));
-  border-radius: 3px 3px 0 0;
+.pbi-bar-svg {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 88px;
+  min-width: 0;
+  display: block;
+}
+
+/* Preview chart chrome — maps to Power BI structural colours (see MS Learn “Set structural colors”) */
+.pbi-chart-grid-line {
+  stroke: var(--pbi-struct-grid, var(--pbi-fg-muted));
+  stroke-width: 1;
+  stroke-opacity: 0.85;
+}
+
+.pbi-chart-axis-line {
+  stroke: var(--pbi-struct-axis, var(--pbi-border));
+  stroke-width: 1;
+}
+
+.pbi-chart-connector {
+  stroke: var(--pbi-struct-axis, var(--pbi-border));
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  stroke-opacity: 0.95;
+}
+
+.pbi-chart-axis-label {
+  fill: var(--pbi-struct-axis-label, var(--pbi-fg-secondary));
+  font: 600 7px/1.1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.pbi-chart-axis-label--y {
+  font-size: 6.5px;
+}
+
+.pbi-chart-data-label {
+  fill: var(--pbi-struct-data-label, var(--pbi-fg));
+  font: 600 7px/1.1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 .pbi-waterfall-svg {
   flex: 1 1 auto;
   width: 100%;
-  min-height: 0;
+  min-height: 96px;
   height: 100%;
   max-height: none;
   display: block;
@@ -997,7 +1072,7 @@ button:hover,
   background: #fff;
   border-radius: 8px;
   overflow: auto;
-  max-height: 280px;
+  max-height: 160px;
   color: var(--text);
   white-space: pre-wrap;
   word-break: break-all;
@@ -1013,7 +1088,7 @@ button:hover,
   background: #fff;
   border-radius: 8px;
   overflow: auto;
-  max-height: 280px;
+  max-height: 160px;
 }
 .svg-preview svg {
   display: block;

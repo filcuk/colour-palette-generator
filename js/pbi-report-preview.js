@@ -3,6 +3,51 @@ import { getStructuralColorsResolved } from './colour-export.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+const PBI_MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** Rolling 6-month window ending in the current calendar month (e.g. Jun → "Jan 2026 – Jun 2026"). */
+function formatPbiSlicerLast6MonthsLabel() {
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth(), 1);
+  const start = new Date(end.getFullYear(), end.getMonth() - 5, 1);
+  const fmt = d => `${PBI_MONTH_ABBR[d.getMonth()]} ${d.getFullYear()}`;
+  return `${fmt(start)} - ${fmt(end)}`;
+}
+
+/**
+ * Product names from the preview table’s first column (keeps slicer in sync with the table).
+ * @param {HTMLElement} root
+ * @returns {string[]}
+ */
+function collectPbiPreviewProductNames(root) {
+  const tbody = root.querySelector('#pbiProductTable tbody');
+  if (!tbody) return [];
+  return Array.from(tbody.querySelectorAll('tr td:first-child'))
+    .map(td => td.textContent.trim())
+    .filter(Boolean);
+}
+
+/**
+ * @param {HTMLElement} root
+ */
+function renderPbiProductSlicerList(root) {
+  const host = root.querySelector('#pbiSlicerProductList');
+  if (!host) return;
+  const names = collectPbiPreviewProductNames(root);
+  host.replaceChildren();
+  for (const name of names) {
+    const label = document.createElement('label');
+    label.className = 'pbi-slicer-check';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = true;
+    const span = document.createElement('span');
+    span.textContent = name;
+    label.append(input, span);
+    host.appendChild(label);
+  }
+}
+
 /** Demo treemap tiles: areas approximate relative weight; one tile uses divergent null. */
 const PBI_TREEMAP_CELLS = [
   { label: 'Enterprise', gridColumn: '1 / 8', gridRow: '1 / 8' },
@@ -95,28 +140,176 @@ function renderPbiTreemap(slot, palette) {
 }
 
 /**
+ * Column bar chart with Y grid, axes, category labels, and data labels (structural colours via CSS).
+ * @param {HTMLElement} barArea
+ * @param {number} n number of bars (theme colour count)
+ */
+function renderPbiBarAreaSvg(barArea, n) {
+  barArea.replaceChildren();
+  const nb = Math.max(1, n);
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('class', 'pbi-bar-svg');
+  svg.setAttribute('viewBox', '0 0 260 112');
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  svg.setAttribute('aria-hidden', 'true');
+
+  const W = 260;
+  const H = 112;
+  const padL = 28;
+  const padR = 8;
+  const padT = 10;
+  const padB = 20;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const baselineY = padT + chartH;
+  const yTicks = [0, 25, 50, 75, 100];
+
+  for (const t of yTicks) {
+    const y = baselineY - (t / 100) * chartH;
+    const g = document.createElementNS(SVG_NS, 'line');
+    g.setAttribute('class', 'pbi-chart-grid-line');
+    g.setAttribute('x1', String(padL));
+    g.setAttribute('x2', String(W - padR));
+    g.setAttribute('y1', String(y));
+    g.setAttribute('y2', String(y));
+    svg.appendChild(g);
+  }
+
+  const spine = document.createElementNS(SVG_NS, 'line');
+  spine.setAttribute('class', 'pbi-chart-axis-line');
+  spine.setAttribute('x1', String(padL));
+  spine.setAttribute('x2', String(padL));
+  spine.setAttribute('y1', String(padT));
+  spine.setAttribute('y2', String(baselineY));
+  svg.appendChild(spine);
+
+  const xAxis = document.createElementNS(SVG_NS, 'line');
+  xAxis.setAttribute('class', 'pbi-chart-axis-line');
+  xAxis.setAttribute('x1', String(padL));
+  xAxis.setAttribute('x2', String(W - padR));
+  xAxis.setAttribute('y1', String(baselineY));
+  xAxis.setAttribute('y2', String(baselineY));
+  svg.appendChild(xAxis);
+
+  for (const t of yTicks) {
+    const y = baselineY - (t / 100) * chartH;
+    const txt = document.createElementNS(SVG_NS, 'text');
+    txt.setAttribute('class', 'pbi-chart-axis-label pbi-chart-axis-label--y');
+    txt.setAttribute('x', String(padL - 4));
+    txt.setAttribute('y', String(y + 3));
+    txt.setAttribute('text-anchor', 'end');
+    txt.textContent = String(t);
+    svg.appendChild(txt);
+  }
+
+  const colGap = Math.max(4, 10 - nb);
+  const slotW = (chartW - colGap * (nb - 1)) / nb;
+  const barW = Math.min(26, slotW * 0.72);
+
+  for (let i = 0; i < nb; i++) {
+    const hPct = 36 + ((i * 41 + nb * 13) % 50);
+    const barH = (hPct / 100) * chartH;
+    const xCenter = padL + i * (slotW + colGap) + slotW / 2;
+    const x = xCenter - barW / 2;
+    const y = baselineY - barH;
+    const rect = document.createElementNS(SVG_NS, 'rect');
+    rect.setAttribute('x', String(x));
+    rect.setAttribute('y', String(y));
+    rect.setAttribute('width', String(barW));
+    rect.setAttribute('height', String(Math.max(1, barH)));
+    rect.setAttribute('rx', '2');
+    rect.setAttribute('fill', `var(--pbi-c${i})`);
+    svg.appendChild(rect);
+
+    const lab = document.createElementNS(SVG_NS, 'text');
+    lab.setAttribute('class', 'pbi-chart-data-label');
+    lab.setAttribute('x', String(xCenter));
+    lab.setAttribute('y', String(y - 3));
+    lab.setAttribute('text-anchor', 'middle');
+    lab.textContent = `${hPct}%`;
+    svg.appendChild(lab);
+
+    const cat = document.createElementNS(SVG_NS, 'text');
+    cat.setAttribute('class', 'pbi-chart-axis-label');
+    cat.setAttribute('x', String(xCenter));
+    cat.setAttribute('y', String(baselineY + 12));
+    cat.setAttribute('text-anchor', 'middle');
+    cat.textContent = `P${i + 1}`;
+    svg.appendChild(cat);
+  }
+
+  barArea.appendChild(svg);
+}
+
+/**
  * @param {SVGSVGElement} svg
  */
 function renderPbiWaterfallSvg(svg) {
   while (svg.firstChild) svg.removeChild(svg.firstChild);
 
   const W = 260;
-  const H = 90;
-  const padL = 6;
-  const padR = 6;
-  const padT = 8;
-  const padB = 10;
+  const H = 118;
+  const padL = 28;
+  const padR = 8;
+  const padT = 12;
+  const padB = 22;
   const chartW = W - padL - padR;
   const chartH = H - padT - padB;
   const baselineY = padT + chartH;
   const maxVal = 52;
+  const yTicks = [0, 13, 26, 39, 52];
 
   const yAt = v => baselineY - (v / maxVal) * chartH;
+
+  for (const t of yTicks) {
+    const y = yAt(t);
+    const gl = document.createElementNS(SVG_NS, 'line');
+    gl.setAttribute('class', 'pbi-chart-grid-line');
+    gl.setAttribute('x1', String(padL));
+    gl.setAttribute('x2', String(W - padR));
+    gl.setAttribute('y1', String(y));
+    gl.setAttribute('y2', String(y));
+    svg.appendChild(gl);
+  }
+
+  const spine = document.createElementNS(SVG_NS, 'line');
+  spine.setAttribute('class', 'pbi-chart-axis-line');
+  spine.setAttribute('x1', String(padL));
+  spine.setAttribute('x2', String(padL));
+  spine.setAttribute('y1', String(padT));
+  spine.setAttribute('y2', String(baselineY));
+  svg.appendChild(spine);
+
+  const xAxis = document.createElementNS(SVG_NS, 'line');
+  xAxis.setAttribute('class', 'pbi-chart-axis-line');
+  xAxis.setAttribute('x1', String(padL));
+  xAxis.setAttribute('x2', String(W - padR));
+  xAxis.setAttribute('y1', String(baselineY));
+  xAxis.setAttribute('y2', String(baselineY));
+  svg.appendChild(xAxis);
+
+  for (const t of yTicks) {
+    const y = yAt(t);
+    const txt = document.createElementNS(SVG_NS, 'text');
+    txt.setAttribute('class', 'pbi-chart-axis-label pbi-chart-axis-label--y');
+    txt.setAttribute('x', String(padL - 4));
+    txt.setAttribute('y', String(y + 3));
+    txt.setAttribute('text-anchor', 'end');
+    txt.textContent = String(t);
+    svg.appendChild(txt);
+  }
 
   /** @type {{ kind: string, y: number, h: number, fill: string }[]} */
   const bars = [];
 
-  const startVal = 38;
+  const startVal = 32;
+  const deltas = [
+    { dir: 'up', d: 12 },
+    { dir: 'down', d: 21 },
+    { dir: 'up', d: 32 },
+    { dir: 'down', d: 8 }
+  ];
+
   let cum = startVal;
   bars.push({
     kind: 'total',
@@ -124,13 +317,6 @@ function renderPbiWaterfallSvg(svg) {
     h: baselineY - yAt(startVal),
     fill: 'var(--pbi-sentiment-neutral)'
   });
-
-  const deltas = [
-    { dir: 'up', d: 14 },
-    { dir: 'down', d: 9 },
-    { dir: 'down', d: 7 },
-    { dir: 'up', d: 6 }
-  ];
 
   for (const { dir, d } of deltas) {
     if (dir === 'up') {
@@ -156,7 +342,7 @@ function renderPbiWaterfallSvg(svg) {
     }
   }
 
-  const endVal = 42;
+  const endVal = cum;
   bars.push({
     kind: 'total',
     y: yAt(endVal),
@@ -173,6 +359,14 @@ function renderPbiWaterfallSvg(svg) {
   }
   cumAfterBar.push(endVal);
 
+  const dataLabelStrs = [String(startVal)];
+  for (const { dir, d } of deltas) {
+    dataLabelStrs.push(dir === 'up' ? `+${d}` : `-${d}`);
+  }
+  dataLabelStrs.push(String(endVal));
+
+  const catLabels = ['Opening', 'Sales', 'Costs', 'Returns', 'Adj', 'Closing'];
+
   const nb = bars.length;
   const colW = chartW / nb;
 
@@ -188,19 +382,43 @@ function renderPbiWaterfallSvg(svg) {
     rect.setAttribute('rx', '2');
     rect.setAttribute('fill', b.fill);
     svg.appendChild(rect);
+  }
 
-    if (i < nb - 1) {
-      const yLine = yAt(cumAfterBar[i]);
-      const line = document.createElementNS(SVG_NS, 'line');
-      line.setAttribute('x1', String(x + w));
-      line.setAttribute('x2', String(padL + (i + 1) * colW + colW * 0.12));
-      line.setAttribute('y1', String(yLine));
-      line.setAttribute('y2', String(yLine));
-      line.setAttribute('stroke', 'var(--pbi-border)');
-      line.setAttribute('stroke-width', '1');
-      line.setAttribute('stroke-dasharray', '2 2');
-      svg.appendChild(line);
-    }
+  for (let i = 0; i < nb - 1; i++) {
+    const b = bars[i];
+    const x = padL + i * colW + colW * 0.12;
+    const w = colW * 0.76;
+    const yLine = yAt(cumAfterBar[i]);
+    const line = document.createElementNS(SVG_NS, 'line');
+    line.setAttribute('x1', String(x + w));
+    line.setAttribute('x2', String(padL + (i + 1) * colW + colW * 0.12));
+    line.setAttribute('y1', String(yLine));
+    line.setAttribute('y2', String(yLine));
+    line.setAttribute('class', 'pbi-chart-connector');
+    svg.appendChild(line);
+  }
+
+  for (let i = 0; i < nb; i++) {
+    const x = padL + i * colW + colW * 0.12;
+    const w = colW * 0.76;
+    const cx = x + w / 2;
+    const b = bars[i];
+    const labelY = Math.max(padT + 7, b.y - 3);
+    const dl = document.createElementNS(SVG_NS, 'text');
+    dl.setAttribute('class', 'pbi-chart-data-label');
+    dl.setAttribute('x', String(cx));
+    dl.setAttribute('y', String(labelY));
+    dl.setAttribute('text-anchor', 'middle');
+    dl.textContent = dataLabelStrs[i] || '';
+    svg.appendChild(dl);
+
+    const cat = document.createElementNS(SVG_NS, 'text');
+    cat.setAttribute('class', 'pbi-chart-axis-label');
+    cat.setAttribute('x', String(cx));
+    cat.setAttribute('y', String(baselineY + 12));
+    cat.setAttribute('text-anchor', 'middle');
+    cat.textContent = catLabels[i] || '';
+    svg.appendChild(cat);
   }
 }
 
@@ -211,6 +429,10 @@ function renderPbiWaterfallSvg(svg) {
  */
 export function refreshPbiReportPreview(root) {
   if (!root) return;
+  const dateSlicer = root.querySelector('#pbiSlicerDateRange');
+  if (dateSlicer) dateSlicer.textContent = formatPbiSlicerLast6MonthsLabel();
+  renderPbiProductSlicerList(root);
+
   const theme = getThemeColorsFromState();
   const s = getStructuralColorsResolved(state);
   const [firstLevel, secondLevel, thirdLevel, fourthLevel, pageBg, secondaryBg] = s;
@@ -222,6 +444,11 @@ export function refreshPbiReportPreview(root) {
   root.style.setProperty('--pbi-fg-muted', thirdLevel);
   root.style.setProperty('--pbi-border', fourthLevel);
   root.style.setProperty('--pbi-accent', theme[0] || '#118DFF');
+  /* Chart chrome vs structural keys (MS Learn: thirdLevel≈gridlines, fourth≈axis/frame, second≈axis labels, first≈data labels) */
+  root.style.setProperty('--pbi-struct-grid', thirdLevel);
+  root.style.setProperty('--pbi-struct-axis', fourthLevel);
+  root.style.setProperty('--pbi-struct-axis-label', secondLevel);
+  root.style.setProperty('--pbi-struct-data-label', firstLevel);
 
   const [sentGood, sentNeutral, sentBad] = getSentimentColorsResolved();
   root.style.setProperty('--pbi-sentiment-good', sentGood);
@@ -237,17 +464,7 @@ export function refreshPbiReportPreview(root) {
   }
 
   const barArea = root.querySelector('#pbiBarArea');
-  if (barArea) {
-    barArea.replaceChildren();
-    for (let i = 0; i < n; i++) {
-      const bar = document.createElement('div');
-      bar.className = 'pbi-bar';
-      const hPct = 36 + ((i * 41 + n * 13) % 50);
-      bar.style.setProperty('--h', `${hPct}%`);
-      bar.style.setProperty('--bc', `var(--pbi-c${i})`);
-      barArea.appendChild(bar);
-    }
-  }
+  if (barArea) renderPbiBarAreaSvg(barArea, n);
 
   const divColors = getDivergentColorsResolved();
   const nullDivergent = divColors.length >= 4 ? divColors[3] : secondaryBg;
